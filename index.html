@@ -1,9 +1,9 @@
 <!-- 
-    STEP 33: Validation Fix  
-    - Added validation checks for block.top and block.height
-    - Returns empty string if blocks have NaN or undefined values
-    - Prevents invalid blocks from breaking HTML generation
-    - Should fix "script error" caused by malformed block data
+    STEP 35: Syntax Fix
+    - FIXED: Removed duplicate lines in calculateWakeupBlock function
+    - Lines 4024-4027 were old code that didn't get deleted
+    - Caused "unexpected token ':'" syntax error
+    - App should work properly now!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -3653,7 +3653,13 @@
             
             createSleepChart(dates, nightSleepData, napData, wakeupData);
             displaySleepStats(nightSleepData, napData, wakeupData);
-            renderWeeklySchedule();
+            
+            try {
+                renderWeeklySchedule();
+            } catch (error) {
+                console.error('Weekly schedule error:', error);
+                // Don't break the app if weekly schedule fails
+            }
         }
 
         function createSleepChart(dates, nightSleepData, napData, wakeupData) {
@@ -4013,10 +4019,6 @@
                 top: startPercent,
                 height: heightPercent,
                 time: `Wake-up: ${wakeup.durationMinutes}m at ${timeStr}`
-            };
-        }
-                height: heightPercent,
-                time: `Wake-up: ${wakeup.durationMinutes}m at ${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
             };
         }
 
