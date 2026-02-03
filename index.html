@@ -1,10 +1,13 @@
 <!-- 
-    STEP 28: Time Input Fix
-    - Reduced font size from 2em to 1.8em
-    - Changed width from fixed 160px to max-width 180px with auto width
-    - Added box-sizing: border-box to contain padding/border
-    - Reduced padding from 15px to 12px
-    - Time input now fits perfectly within container
+    STEP 29: Weekly Sleep Schedule Visual
+    - Added weekly calendar view to Trends tab
+    - 7 vertical columns (Sun-Sat), scrollable horizontally
+    - Midnight at top and bottom (12:01 AM - 11:59 PM)
+    - Dark blue = night sleep, light blue = naps, white = awake
+    - Hover shows time, duration, location
+    - Week navigation (Previous/Next buttons)
+    - Total sleep hours shown at bottom of each day
+    - Can see patterns: overnight sleep, naps, wake times
 -->
 
 <!DOCTYPE html>
@@ -1598,6 +1601,26 @@
 
         <!-- Trends Tab -->
         <div id="trends-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    📅 Weekly Sleep Schedule
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <button onclick="changeWeek(-1)" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        ← Previous
+                    </button>
+                    <div id="week-display" style="font-weight: 600; font-size: 1.1em;"></div>
+                    <button onclick="changeWeek(1)" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        Next →
+                    </button>
+                </div>
+                
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <div id="weekly-schedule"></div>
+                </div>
+            </div>
+            
             <div class="card">
                 <div class="card-header">
                     📈 Sleep Trends (Last 7 Days)
@@ -3640,6 +3663,7 @@
         
         createSleepChart(dates, nightSleepData, napData, wakeupData);
         displaySleepStats(nightSleepData, napData, wakeupData);
+        renderWeeklySchedule();
     }
 
     function createSleepChart(dates, nightSleepData, napData, wakeupData) {
@@ -3733,6 +3757,214 @@
                 </div>
             </div>
         `;
+    }
+
+    let currentWeekOffset = 0;
+
+    function changeWeek(direction) {
+        currentWeekOffset += direction;
+        renderWeeklySchedule();
+    }
+
+    function renderWeeklySchedule() {
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay() + (currentWeekOffset * 7)); // Start on Sunday
+        
+        const weekDates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + i);
+            weekDates.push(date);
+        }
+        
+        // Update week display
+        const weekDisplay = document.getElementById('week-display');
+        const startStr = weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        weekDisplay.textContent = `${startStr} - ${endStr}`;
+        
+        // Build the visual schedule
+        const scheduleDiv = document.getElementById('weekly-schedule');
+        let html = '<div style="display: flex; gap: 8px; min-width: 700px;">';
+        
+        weekDates.forEach(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = getSleepDataForDate(dateStr);
+            
+            html += `<div style="flex: 1; min-width: 90px;">`;
+            html += `<div style="text-align: center; font-weight: 600; margin-bottom: 8px; font-size: 0.9em;">`;
+            html += `${date.toLocaleDateString('en-US', { weekday: 'short' })}<br>${date.getDate()}`;
+            html += `</div>`;
+            
+            // Draw the 24-hour column
+            html += `<div style="position: relative; height: 600px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 8px;">`;
+            
+            if (dayData) {
+                // Add night sleep blocks
+                if (dayData.bedtime && dayData.wakeTime) {
+                    const blocks = calculateSleepBlocks(dayData, dateStr);
+                    blocks.forEach(block => {
+                        html += createSleepBlock(block);
+                    });
+                }
+                
+                // Add nap blocks
+                if (dayData.naps) {
+                    dayData.naps.forEach(nap => {
+                        const napBlock = calculateNapBlock(nap, dateStr);
+                        if (napBlock) {
+                            html += createSleepBlock(napBlock);
+                        }
+                    });
+                }
+            }
+            
+            html += `</div>`;
+            
+            // Total sleep hours
+            const totalHours = calculateTotalSleep(dayData);
+            html += `<div style="text-align: center; margin-top: 5px; font-size: 0.85em; color: #666;">`;
+            html += `${totalHours}h`;
+            html += `</div>`;
+            
+            html += `</div>`;
+        });
+        
+        html += '</div>';
+        
+        // Add time labels
+        html += '<div style="display: flex; margin-top: 10px; font-size: 0.8em; color: #666;">';
+        html += '<div style="flex: 1; text-align: center;">12 AM</div>';
+        html += '<div style="flex: 1; text-align: center;">6 AM</div>';
+        html += '<div style="flex: 1; text-align: center;">12 PM</div>';
+        html += '<div style="flex: 1; text-align: center;">6 PM</div>';
+        html += '<div style="flex: 1; text-align: center;">12 AM</div>';
+        html += '</div>';
+        
+        scheduleDiv.innerHTML = html;
+    }
+
+    function getSleepDataForDate(dateStr) {
+        const key = `daily-sleep-${dateStr}`;
+        const stored = localStorage.getItem(key);
+        if (!stored) return null;
+        return JSON.parse(stored);
+    }
+
+    function calculateSleepBlocks(dayData, dateStr) {
+        const blocks = [];
+        const bedtime = new Date(dayData.bedtime);
+        const wakeTime = new Date(dayData.wakeTime);
+        
+        const bedtimeHour = bedtime.getHours();
+        const wakeTimeHour = wakeTime.getHours();
+        const wakeTimeMinute = wakeTime.getMinutes();
+        
+        // Night sleep from midnight to wake time
+        if (wakeTimeHour > 0 || wakeTimeMinute > 0) {
+            const startPercent = 0;
+            const endPercent = ((wakeTimeHour * 60 + wakeTimeMinute) / (24 * 60)) * 100;
+            
+            blocks.push({
+                type: 'night',
+                top: startPercent,
+                height: endPercent - startPercent,
+                time: `Sleep until ${wakeTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+            });
+        }
+        
+        // Night sleep from bedtime to midnight
+        if (bedtimeHour >= 18 || bedtimeHour < 6) {
+            const bedtimeMinute = bedtime.getMinutes();
+            const startPercent = ((bedtimeHour * 60 + bedtimeMinute) / (24 * 60)) * 100;
+            const endPercent = 100;
+            
+            if (startPercent < endPercent) {
+                blocks.push({
+                    type: 'night',
+                    top: startPercent,
+                    height: endPercent - startPercent,
+                    time: `Bedtime ${bedtime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+                });
+            }
+        }
+        
+        return blocks;
+    }
+
+    function calculateNapBlock(nap, dateStr) {
+        const start = new Date(nap.start);
+        const end = new Date(nap.end);
+        
+        const startHour = start.getHours();
+        const startMinute = start.getMinutes();
+        const endHour = end.getHours();
+        const endMinute = end.getMinutes();
+        
+        const startPercent = ((startHour * 60 + startMinute) / (24 * 60)) * 100;
+        const endPercent = ((endHour * 60 + endMinute) / (24 * 60)) * 100;
+        
+        const duration = Math.round((end - start) / (1000 * 60));
+        
+        return {
+            type: 'nap',
+            top: startPercent,
+            height: endPercent - startPercent,
+            time: `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+            duration: `${duration}m`,
+            location: nap.location
+        };
+    }
+
+    function createSleepBlock(block) {
+        const color = block.type === 'night' ? 'rgba(59, 130, 246, 0.8)' : 'rgba(147, 197, 253, 0.8)';
+        const borderColor = block.type === 'night' ? 'rgba(37, 99, 235, 1)' : 'rgba(59, 130, 246, 1)';
+        
+        let title = block.time;
+        if (block.duration) title += `\\n${block.duration}`;
+        if (block.location) title += `\\n${block.location}`;
+        
+        return `
+            <div style="
+                position: absolute;
+                top: ${block.top}%;
+                height: ${block.height}%;
+                left: 2px;
+                right: 2px;
+                background: ${color};
+                border: 1px solid ${borderColor};
+                border-radius: 4px;
+                cursor: pointer;
+            " title="${title}"></div>
+        `;
+    }
+
+    function calculateTotalSleep(dayData) {
+        if (!dayData) return 0;
+        
+        let total = 0;
+        
+        // Night sleep
+        if (dayData.bedtime && dayData.wakeTime) {
+            const bedtime = new Date(dayData.bedtime);
+            const wakeTime = new Date(dayData.wakeTime);
+            let diff = wakeTime - bedtime;
+            if (diff < 0) diff += 24 * 60 * 60 * 1000;
+            total += diff / (1000 * 60 * 60);
+        }
+        
+        // Naps
+        if (dayData.naps) {
+            dayData.naps.forEach(nap => {
+                const start = new Date(nap.start);
+                const end = new Date(nap.end);
+                const diff = end - start;
+                total += diff / (1000 * 60 * 60);
+            });
+        }
+        
+        return total.toFixed(1);
     }
 
     // Settings Tab Functions
