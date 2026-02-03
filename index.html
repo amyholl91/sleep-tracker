@@ -1483,23 +1483,25 @@
                     
                     <div class="bedtime-input-group">
                         <div id="logged-bedtime-display" style="display: none; background: #f0f4ff; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-                            <div style="font-size: 1.1em; font-weight: 600; color: #667eea; margin-bottom: 8px;">
-                                ✅ Bedtime Logged
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="font-size: 1.1em; font-weight: 600; color: #667eea;">
+                                    ✅ Bedtime Logged
+                                </div>
+                                <button onclick="editLoggedBedtime()" style="
+                                    padding: 6px 12px;
+                                    background: #667eea;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 6px;
+                                    font-size: 0.85em;
+                                    cursor: pointer;
+                                ">
+                                    ✏️ Edit
+                                </button>
                             </div>
-                            <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px;" id="logged-bedtime-text">
+                            <div style="font-size: 1.5em; font-weight: bold;" id="logged-bedtime-text">
                                 8:45 PM
                             </div>
-                            <button onclick="editLoggedBedtime()" style="
-                                padding: 8px 16px;
-                                background: #667eea;
-                                color: white;
-                                border: none;
-                                border-radius: 8px;
-                                font-size: 0.95em;
-                                cursor: pointer;
-                            ">
-                                ✏️ Edit Time
-                            </button>
                         </div>
                         
                         <label>⏰ What time did baby actually fall asleep tonight?</label>
@@ -2179,8 +2181,13 @@
                 hour12: true 
             });
             
-            // Format for input field (YYYY-MM-DDTHH:MM)
-            let bedtimeStr = now.toISOString().slice(0, 16);
+            // Format for input field in local timezone (YYYY-MM-DDTHH:MM)
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            let bedtimeStr = `${year}-${month}-${day}T${hour}:${minute}`;
             
             // Get current time in 12-hour format for default
             let hours = now.getHours();
@@ -2214,7 +2221,14 @@
                     
                     const editedTime = new Date();
                     editedTime.setHours(hours, minutes, 0, 0);
-                    bedtimeStr = editedTime.toISOString().slice(0, 16);
+                    
+                    // Format in local timezone
+                    const year = editedTime.getFullYear();
+                    const month = String(editedTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(editedTime.getDate()).padStart(2, '0');
+                    const hour = String(editedTime.getHours()).padStart(2, '0');
+                    const minute = String(editedTime.getMinutes()).padStart(2, '0');
+                    bedtimeStr = `${year}-${month}-${day}T${hour}:${minute}`;
                 }
             }
             
@@ -2293,7 +2307,14 @@
                     
                     const editedTime = new Date();
                     editedTime.setHours(hours, minutes, 0, 0);
-                    bedtimeInput.value = editedTime.toISOString().slice(0, 16);
+                    
+                    // Format in local timezone for datetime-local input
+                    const year = editedTime.getFullYear();
+                    const month = String(editedTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(editedTime.getDate()).padStart(2, '0');
+                    const hour = String(editedTime.getHours()).padStart(2, '0');
+                    const minute = String(editedTime.getMinutes()).padStart(2, '0');
+                    bedtimeInput.value = `${year}-${month}-${day}T${hour}:${minute}`;
                     
                     // Save and update
                     saveDailySleepData();
