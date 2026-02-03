@@ -1,8 +1,8 @@
 <!-- 
-    STEP 23: Input Containment Fix
-    - Fixed all time input boxes to stay within margins
-    - Added box-sizing and max-width constraints
-    - Centered and contained all datetime inputs
+    STEP 24: Symmetric Margins Fix
+    - Fixed uneven margins (more on left than right)
+    - Ensured symmetric padding in content and cards
+    - Set explicit margin: 0 0 X 0 on form groups
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -248,7 +248,7 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin: 0 0 20px 0;
             max-width: 100%;
             box-sizing: border-box;
         }
@@ -1054,12 +1054,12 @@
             }
 
             .content {
-                padding: 10px;
+                padding: 10px 10px;
             }
 
             .card {
                 padding: 10px;
-                margin-bottom: 10px;
+                margin: 0 0 10px 0;
             }
 
             .card-header {
@@ -1073,7 +1073,7 @@
             }
 
             .form-group {
-                margin-bottom: 8px;
+                margin: 0 0 8px 0;
             }
 
             .form-group label {
