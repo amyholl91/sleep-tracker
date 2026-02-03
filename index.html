@@ -1482,8 +1482,28 @@
                     </div>
                     
                     <div class="bedtime-input-group">
+                        <div id="logged-bedtime-display" style="display: none; background: #f0f4ff; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <div style="font-size: 1.1em; font-weight: 600; color: #667eea; margin-bottom: 8px;">
+                                ✅ Bedtime Logged
+                            </div>
+                            <div style="font-size: 1.3em; font-weight: bold; margin-bottom: 10px;" id="logged-bedtime-text">
+                                8:45 PM
+                            </div>
+                            <button onclick="editLoggedBedtime()" style="
+                                padding: 8px 16px;
+                                background: #667eea;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 0.95em;
+                                cursor: pointer;
+                            ">
+                                ✏️ Edit Time
+                            </button>
+                        </div>
+                        
                         <label>⏰ What time did baby actually fall asleep tonight?</label>
-                        <input type="time" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px;">
+                        <input type="datetime-local" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px;" onchange="updateLoggedBedtimeDisplay()">
                         <p style="color: #666; font-size: 0.9em; margin-top: 8px;">This will auto-populate into tomorrow's "Last Night's Bedtime"</p>
                     </div>
                 </div>
@@ -1689,6 +1709,7 @@
             setupNapInputs();
             setupCheckbox();
             updateNextSleepWindow();
+            updateLoggedBedtimeDisplay();
             startSleepWindowTimer();
         });
 
@@ -2206,8 +2227,9 @@
             // Save the data
             saveDailySleepData();
             
-            // Update the display
+            // Update displays
             updateNextSleepWindow();
+            updateLoggedBedtimeDisplay();
             
             // Show confirmation with the logged time
             const confirmedTime = new Date(bedtimeStr).toLocaleTimeString('en-US', { 
@@ -2216,6 +2238,71 @@
                 hour12: true 
             });
             alert(`✅ Bedtime logged at ${confirmedTime}! Good night 🌙`);
+        }
+
+        function updateLoggedBedtimeDisplay() {
+            const bedtimeInput = document.getElementById('tonight-bedtime').value;
+            const display = document.getElementById('logged-bedtime-display');
+            const textDisplay = document.getElementById('logged-bedtime-text');
+            
+            if (bedtimeInput) {
+                const bedtimeDate = new Date(bedtimeInput);
+                const displayTime = bedtimeDate.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                textDisplay.textContent = displayTime;
+                display.style.display = 'block';
+            } else {
+                display.style.display = 'none';
+            }
+        }
+
+        function editLoggedBedtime() {
+            const bedtimeInput = document.getElementById('tonight-bedtime');
+            const currentValue = bedtimeInput.value;
+            
+            if (!currentValue) return;
+            
+            const currentTime = new Date(currentValue);
+            let hours = currentTime.getHours();
+            const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            const defaultTime = `${hours}:${minutes} ${ampm}`;
+            
+            const userInput = prompt(
+                `Edit bedtime:\n\nCurrent: ${defaultTime}\n\nEnter new time:`,
+                defaultTime
+            );
+            
+            if (userInput === null) return;
+            
+            // Parse the user's time input
+            if (userInput) {
+                const match = userInput.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i);
+                if (match) {
+                    let hours = parseInt(match[1]);
+                    const minutes = parseInt(match[2]);
+                    const period = match[3].toUpperCase();
+                    
+                    // Convert to 24-hour format
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+                    
+                    const editedTime = new Date();
+                    editedTime.setHours(hours, minutes, 0, 0);
+                    bedtimeInput.value = editedTime.toISOString().slice(0, 16);
+                    
+                    // Save and update
+                    saveDailySleepData();
+                    updateLoggedBedtimeDisplay();
+                    updateNextSleepWindow();
+                    
+                    alert('✅ Bedtime updated!');
+                }
+            }
         }
 
         function updateNapAlert() {
