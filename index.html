@@ -1,9 +1,9 @@
 <!-- 
-    STEP 35: Syntax Fix
-    - FIXED: Removed duplicate lines in calculateWakeupBlock function
-    - Lines 4024-4027 were old code that didn't get deleted
-    - Caused "unexpected token ':'" syntax error
-    - App should work properly now!
+    STEP 36: Nap Debug
+    - Added validation for nap start/end dates
+    - Added console.log debugging to see if naps are being found
+    - Check browser console to see what's happening with naps
+    - Added isNaN checks for invalid dates
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -3838,8 +3838,11 @@
                     
                     // Add nap blocks
                     if (dayData.naps && dayData.naps.length > 0) {
+                        console.log(`Date ${dateStr} has ${dayData.naps.length} naps:`, dayData.naps);
                         dayData.naps.forEach(nap => {
+                            console.log('Processing nap:', nap);
                             const napBlock = calculateNapBlock(nap, dateStr);
+                            console.log('Calculated napBlock:', napBlock);
                             if (napBlock) {
                                 html += createSleepBlock(napBlock);
                             }
@@ -3912,8 +3915,13 @@
         }
 
         function calculateNapBlock(nap, dateStr) {
+            if (!nap || !nap.start || !nap.end) return null;
+            
             const start = new Date(nap.start);
             const end = new Date(nap.end);
+            
+            // Check if dates are valid
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
             
             const startHour = start.getHours();
             const startMinute = start.getMinutes();
