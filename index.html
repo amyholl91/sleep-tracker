@@ -1,9 +1,10 @@
 <!-- 
-    STEP 26: Grid Layout & Auto-populate Fix
-    - Changed mobile back to 2-column grid (was stacking in 1 column)
-    - Fixed bedtime auto-populate from yesterday to today
-    - Now correctly uses full datetime value from tonightBedtime
-    - Reduced mobile gap to 12px for tighter layout
+    STEP 28: Time Input Fix
+    - Reduced font size from 2em to 1.8em
+    - Changed width from fixed 160px to max-width 180px with auto width
+    - Added box-sizing: border-box to contain padding/border
+    - Reduced padding from 15px to 12px
+    - Time input now fits perfectly within container
 -->
 
 <!DOCTYPE html>
@@ -1872,14 +1873,37 @@
 
         display.innerHTML = `
             <div class="active-nap">
-                <h4>😴 Nap in Progress</h4>
-                <div class="active-nap-edit">
-                    <label style="color: white; font-size: 0.9em; margin-bottom: 5px;">Adjust start time if needed:</label>
-                    <input type="time" id="active-nap-start-edit" value="${start.toTimeString().slice(0, 5)}" onchange="updateActiveNapStartTime(this.value)">
+                <h4 style="margin-bottom: 15px;">😴 Nap in Progress</h4>
+                
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85em; margin-bottom: 5px;">Started at</div>
+                    <input type="time" id="active-nap-start-edit" value="${start.toTimeString().slice(0, 5)}" 
+                        onchange="updateActiveNapStartTime(this.value)"
+                        style="
+                            font-size: 1.8em;
+                            font-weight: bold;
+                            color: white;
+                            background: rgba(255,255,255,0.15);
+                            border: 2px solid rgba(255,255,255,0.3);
+                            border-radius: 10px;
+                            padding: 8px 12px;
+                            text-align: center;
+                            max-width: 180px;
+                            width: auto;
+                            margin: 0 auto;
+                            display: block;
+                            box-sizing: border-box;
+                        ">
                 </div>
-                <div class="active-nap-time">Started at ${startTimeStr}</div>
-                <div class="active-nap-duration">Duration: ${hours > 0 ? hours + 'h ' : ''}${minutes}m</div>
-                <div style="margin-bottom: 15px;">${locationEmoji[activeNap.location]} ${activeNap.location}</div>
+                
+                <div style="text-align: center; font-size: 1.5em; font-weight: 600; margin-bottom: 15px;">
+                    Duration: ${hours > 0 ? hours + 'h ' : ''}${minutes}m
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
+                    ${locationEmoji[activeNap.location]} ${activeNap.location}
+                </div>
+                
                 <button class="end-nap-btn" onclick="endActiveNap()">⏹️ End Nap</button>
             </div>
         `;
