@@ -220,6 +220,8 @@
             padding: 25px;
             margin-bottom: 20px;
             border: 2px solid #e9ecef;
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         .card-header {
@@ -241,6 +243,8 @@
 
         .form-group {
             margin-bottom: 20px;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .form-group label {
@@ -264,6 +268,8 @@
             font-size: 15px;
             transition: all 0.3s ease;
             font-family: inherit;
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         input:focus,
@@ -726,6 +732,9 @@
             padding: 15px;
             border-radius: 10px;
             border: 2px solid #e0e0e0;
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .bedtime-input-group label {
@@ -1505,7 +1514,7 @@
                         </div>
                         
                         <label>⏰ What time did baby actually fall asleep tonight?</label>
-                        <input type="datetime-local" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px;" onchange="updateLoggedBedtimeDisplay()">
+                        <input type="datetime-local" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px; width: 100%; max-width: 100%; box-sizing: border-box;" onchange="updateLoggedBedtimeDisplay()">
                         <p style="color: #666; font-size: 0.9em; margin-top: 8px;">This will auto-populate into tomorrow's "Last Night's Bedtime"</p>
                     </div>
                 </div>
