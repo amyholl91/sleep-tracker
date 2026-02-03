@@ -1974,12 +1974,34 @@
             // Check if baby went to bed for the night
             const babyInBed = localStorage.getItem(`baby-in-bed-${currentDate}`);
             if (babyInBed) {
+                // Get the logged bedtime to display
+                const key = `daily-sleep-${currentDate}`;
+                const stored = localStorage.getItem(key);
+                let bedtimeText = '';
+                
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (data.tonightBedtime) {
+                        const bedtimeDate = new Date(data.tonightBedtime);
+                        const displayTime = bedtimeDate.toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                        });
+                        bedtimeText = `Bedtime logged at ${displayTime}`;
+                    } else {
+                        bedtimeText = 'Bedtime logged';
+                    }
+                } else {
+                    bedtimeText = 'Bedtime logged';
+                }
+                
                 display.innerHTML = `
                     <div class="next-sleep-window sleeping">
                         <h3>😴 Baby is Sleeping</h3>
                         <div class="next-sleep-time">Good Night 🌙</div>
                         <div class="next-sleep-countdown">
-                            Bedtime logged
+                            ${bedtimeText}
                         </div>
                     </div>
                 `;
