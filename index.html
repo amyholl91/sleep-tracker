@@ -1,10 +1,9 @@
 <!-- 
-    STEP 25: Proper Spacing Fix
-    - Increased mobile content padding from 10px to 15px
-    - Increased mobile card padding from 10px to 15px  
-    - Increased gap between form fields from 8px to 15px
-    - Removed extra margins on form-groups (now 0)
-    - Time boxes no longer touch edges or each other
+    STEP 26: Grid Layout & Auto-populate Fix
+    - Changed mobile back to 2-column grid (was stacking in 1 column)
+    - Fixed bedtime auto-populate from yesterday to today
+    - Now correctly uses full datetime value from tonightBedtime
+    - Reduced mobile gap to 12px for tighter layout
 -->
 
 <!DOCTYPE html>
@@ -1073,9 +1072,9 @@
         }
 
         .form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .form-group {
@@ -2618,8 +2617,8 @@
             if (yesterdayData) {
                 const data = JSON.parse(yesterdayData);
                 if (data.tonightBedtime) {
-                    // Use yesterday's actual bedtime
-                    bedtimeInput.value = `${dayBeforeStr}T${data.tonightBedtime}`;
+                    // Use yesterday's actual bedtime (it's already in full datetime format)
+                    bedtimeInput.value = data.tonightBedtime;
                 } else {
                     // Default to 7:30 PM
                     bedtimeInput.value = `${dayBeforeStr}T19:30`;
