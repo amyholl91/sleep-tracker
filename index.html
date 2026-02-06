@@ -1,9 +1,9 @@
 <!-- 
-    STEP 38: Nap Edit/Delete Fix
-    - FIXED: Added missing ID to naps created with "Start Nap" button
-    - Previously only manual naps had IDs
-    - Edit and Delete buttons now work for ALL naps
-    - Both manual and "Start Nap" naps get unique IDs
+    STEP 39: Edit/Delete Using Index
+    - Changed from using nap.id to array index
+    - onclick="editNap(0)" instead of onclick="editNap('12345.67')"
+    - Simpler and more reliable
+    - Edit/Delete buttons should work now!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2957,17 +2957,16 @@
                             </div>
                         </div>
                         <div class="saved-nap-actions">
-                            <button class="edit-btn" onclick="editNap('${nap.id}')">✏️ Edit</button>
-                            <button class="delete-btn" onclick="deleteNap('${nap.id}')">🗑️ Delete</button>
+                            <button class="edit-btn" onclick="editNap(${index})">✏️ Edit</button>
+                            <button class="delete-btn" onclick="deleteNap(${index})">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function editNap(napId) {
-            const napIndex = savedNaps.findIndex(n => n.id == napId);
-            if (napIndex === -1) return;
+        function editNap(napIndex) {
+            if (napIndex < 0 || napIndex >= savedNaps.length) return;
             
             const nap = savedNaps[napIndex];
             document.getElementById('nap-start').value = nap.start;
@@ -2996,10 +2995,9 @@
             window.scrollTo({ top: 400, behavior: 'smooth' });
         }
 
-        function deleteNap(napId) {
+        function deleteNap(napIndex) {
             if (confirm('Are you sure you want to delete this nap?')) {
-                const napIndex = savedNaps.findIndex(n => n.id == napId);
-                if (napIndex !== -1) {
+                if (napIndex >= 0 && napIndex < savedNaps.length) {
                     savedNaps.splice(napIndex, 1);
                     renderSavedNaps();
                     updateSummary();
