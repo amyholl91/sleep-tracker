@@ -1,9 +1,9 @@
 <!-- 
-    STEP 39: Edit/Delete Using Index
-    - Changed from using nap.id to array index
-    - onclick="editNap(0)" instead of onclick="editNap('12345.67')"
-    - Simpler and more reliable
-    - Edit/Delete buttons should work now!
+    STEP 40: Debug Delete
+    - Added console.log debugging to deleteNap function
+    - Will show what index is being deleted
+    - Will show the nap array before and after
+    - Check browser console after clicking delete
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2996,13 +2996,21 @@
         }
 
         function deleteNap(napIndex) {
+            console.log('Delete clicked for index:', napIndex);
+            console.log('Current savedNaps:', savedNaps);
+            console.log('Nap to delete:', savedNaps[napIndex]);
+            
             if (confirm('Are you sure you want to delete this nap?')) {
                 if (napIndex >= 0 && napIndex < savedNaps.length) {
+                    console.log('Deleting nap at index', napIndex);
                     savedNaps.splice(napIndex, 1);
+                    console.log('After delete, savedNaps:', savedNaps);
                     renderSavedNaps();
                     updateSummary();
                     updateNextSleepWindow();
                     saveDailySleepData();
+                } else {
+                    console.log('Invalid index:', napIndex, 'Array length:', savedNaps.length);
                 }
             }
         }
