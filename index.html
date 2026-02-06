@@ -1,9 +1,9 @@
 <!-- 
-    STEP 36: Nap Debug
-    - Added validation for nap start/end dates
-    - Added console.log debugging to see if naps are being found
-    - Check browser console to see what's happening with naps
-    - Added isNaN checks for invalid dates
+    STEP 38: Nap Edit/Delete Fix
+    - FIXED: Added missing ID to naps created with "Start Nap" button
+    - Previously only manual naps had IDs
+    - Edit and Delete buttons now work for ALL naps
+    - Both manual and "Start Nap" naps get unique IDs
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1978,6 +1978,7 @@
             const isShortNap = totalMinutes < 20;
 
             const nap = {
+                id: Date.now() + Math.random(), // Unique ID
                 start: start.toTimeString().slice(0, 5),
                 end: endTime.toTimeString().slice(0, 5),
                 duration: durationText,
@@ -3838,11 +3839,8 @@
                     
                     // Add nap blocks
                     if (dayData.naps && dayData.naps.length > 0) {
-                        console.log(`Date ${dateStr} has ${dayData.naps.length} naps:`, dayData.naps);
                         dayData.naps.forEach(nap => {
-                            console.log('Processing nap:', nap);
                             const napBlock = calculateNapBlock(nap, dateStr);
-                            console.log('Calculated napBlock:', napBlock);
                             if (napBlock) {
                                 html += createSleepBlock(napBlock);
                             }
@@ -3917,28 +3915,37 @@
         function calculateNapBlock(nap, dateStr) {
             if (!nap || !nap.start || !nap.end) return null;
             
-            const start = new Date(nap.start);
-            const end = new Date(nap.end);
+            // Naps are saved as time strings like "10:30", need to convert to full datetime
+            const startParts = nap.start.split(':');
+            const endParts = nap.end.split(':');
             
-            // Check if dates are valid
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+            if (startParts.length !== 2 || endParts.length !== 2) return null;
             
-            const startHour = start.getHours();
-            const startMinute = start.getMinutes();
-            const endHour = end.getHours();
-            const endMinute = end.getMinutes();
+            const startHour = parseInt(startParts[0]);
+            const startMinute = parseInt(startParts[1]);
+            const endHour = parseInt(endParts[0]);
+            const endMinute = parseInt(endParts[1]);
+            
+            if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) return null;
             
             const startPercent = ((startHour * 60 + startMinute) / (24 * 60)) * 100;
             const endPercent = ((endHour * 60 + endMinute) / (24 * 60)) * 100;
             
-            const duration = Math.round((end - start) / (1000 * 60));
+            // Format times for display
+            const startHour12 = startHour === 0 ? 12 : startHour > 12 ? startHour - 12 : startHour;
+            const endHour12 = endHour === 0 ? 12 : endHour > 12 ? endHour - 12 : endHour;
+            const startAmpm = startHour >= 12 ? 'PM' : 'AM';
+            const endAmpm = endHour >= 12 ? 'PM' : 'AM';
+            
+            const startTimeStr = `${startHour12}:${startMinute.toString().padStart(2, '0')} ${startAmpm}`;
+            const endTimeStr = `${endHour12}:${endMinute.toString().padStart(2, '0')} ${endAmpm}`;
             
             return {
                 type: 'nap',
                 top: startPercent,
                 height: endPercent - startPercent,
-                time: `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
-                duration: `${duration}m`,
+                time: `${startTimeStr} - ${endTimeStr}`,
+                duration: nap.duration || `${nap.durationMinutes}m`,
                 location: nap.location
             };
         }
