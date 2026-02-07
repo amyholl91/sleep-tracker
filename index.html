@@ -1,9 +1,9 @@
 <!-- 
-    STEP 41: Event Listeners Fix
-    - Replaced inline onclick with proper event listeners
-    - Uses data-nap-index attribute to store index
-    - Attaches listeners after HTML is rendered
-    - Should fix edit/delete not working at all
+    STEP 43: Age Calculation Fix
+    - Fixed age to use actual month boundaries, not 30.44 day approximation
+    - Now only turns 11 months on actual monthly birthday (March 9)
+    - Compares year, month, and day properly
+    - Example: Born March 9 → turns 11 months on Feb 9, not before
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -3102,9 +3102,28 @@
             if (!dob) return null;
             const birthDate = new Date(dob);
             const today = new Date();
+            
+            // Calculate months by comparing year and month
+            let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+            months += today.getMonth() - birthDate.getMonth();
+            
+            // If we haven't reached the birth day this month yet, subtract one month
+            if (today.getDate() < birthDate.getDate()) {
+                months--;
+            }
+            
+            // Calculate weeks within the current month
+            const lastMonthBirthday = new Date(today.getFullYear(), today.getMonth(), birthDate.getDate());
+            if (today.getDate() < birthDate.getDate()) {
+                // Go back one month
+                lastMonthBirthday.setMonth(lastMonthBirthday.getMonth() - 1);
+            }
+            
+            const daysSinceLastMonthBirthday = Math.floor((today - lastMonthBirthday) / (1000 * 60 * 60 * 24));
+            const weeks = Math.floor(daysSinceLastMonthBirthday / 7);
+            
             const ageInDays = Math.floor((today - birthDate) / (1000 * 60 * 60 * 24));
-            const months = Math.floor(ageInDays / 30.44);
-            const weeks = Math.floor((ageInDays % 30.44) / 7);
+            
             return { months, weeks, days: ageInDays };
         }
 
@@ -3825,6 +3844,13 @@
                 const dateStr = date.toISOString().split('T')[0];
                 const dayData = getSleepDataForDate(dateStr);
                 
+                // Check if this date is in the future
+                const now = new Date();
+                const dateEnd = new Date(date);
+                dateEnd.setHours(23, 59, 59, 999); // End of this day
+                const isCompletePast = dateEnd < now; // Entire day is in the past
+                const isToday = dateStr === now.toISOString().split('T')[0];
+                
                 html += `<div style="flex: 1; min-width: 90px;">`;
                 html += `<div style="text-align: center; font-weight: 600; margin-bottom: 8px; font-size: 0.9em; height: 40px;">`;
                 html += `${date.toLocaleDateString('en-US', { weekday: 'short' })}<br>${date.getDate()}`;
@@ -3839,12 +3865,27 @@
                     html += `<div style="position: absolute; top: ${topPercent}%; left: 0; right: 0; height: 1px; background: #e0e0e0;"></div>`;
                 }
                 
-                if (dayData) {
+                // Only show sleep data if date is today or in the past
+                if ((isToday || isCompletePast) && dayData) {
+                    const currentHour = now.getHours();
+                    const currentMinutes = now.getMinutes();
+                    const currentTimeInMinutes = currentHour * 60 + currentMinutes;
+                    
                     // Add night sleep blocks
                     if (dayData.bedtime && dayData.wakeTime) {
                         const blocks = calculateSleepBlocks(dayData, dateStr);
                         blocks.forEach(block => {
-                            html += createSleepBlock(block);
+                            // For today, only show blocks that have already occurred
+                            if (isToday) {
+                                // Calculate block start time in minutes from midnight
+                                const blockStartMinutes = (block.top / 100) * (24 * 60);
+                                // Only show if block started in the past
+                                if (blockStartMinutes <= currentTimeInMinutes) {
+                                    html += createSleepBlock(block);
+                                }
+                            } else {
+                                html += createSleepBlock(block);
+                            }
                         });
                     }
                     
@@ -3853,7 +3894,14 @@
                         dayData.wakeups.forEach(wakeup => {
                             const wakeBlock = calculateWakeupBlock(wakeup);
                             if (wakeBlock) {
-                                html += createWakeupBlock(wakeBlock);
+                                if (isToday) {
+                                    const blockStartMinutes = (wakeBlock.top / 100) * (24 * 60);
+                                    if (blockStartMinutes <= currentTimeInMinutes) {
+                                        html += createWakeupBlock(wakeBlock);
+                                    }
+                                } else {
+                                    html += createWakeupBlock(wakeBlock);
+                                }
                             }
                         });
                     }
@@ -3863,7 +3911,14 @@
                         dayData.naps.forEach(nap => {
                             const napBlock = calculateNapBlock(nap, dateStr);
                             if (napBlock) {
-                                html += createSleepBlock(napBlock);
+                                if (isToday) {
+                                    const blockStartMinutes = (napBlock.top / 100) * (24 * 60);
+                                    if (blockStartMinutes <= currentTimeInMinutes) {
+                                        html += createSleepBlock(napBlock);
+                                    }
+                                } else {
+                                    html += createSleepBlock(napBlock);
+                                }
                             }
                         });
                     }
@@ -3871,8 +3926,8 @@
                 
                 html += `</div>`;
                 
-                // Total sleep hours
-                const totalHours = calculateTotalSleep(dayData);
+                // Total sleep hours - only for past/today
+                const totalHours = (isToday || isCompletePast) ? calculateTotalSleep(dayData) : '0.0';
                 html += `<div style="text-align: center; margin-top: 5px; font-size: 0.85em; color: #666;">`;
                 html += `${totalHours}h`;
                 html += `</div>`;
