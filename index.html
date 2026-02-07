@@ -1,9 +1,9 @@
 <!-- 
-    STEP 40: Debug Delete
-    - Added console.log debugging to deleteNap function
-    - Will show what index is being deleted
-    - Will show the nap array before and after
-    - Check browser console after clicking delete
+    STEP 41: Event Listeners Fix
+    - Replaced inline onclick with proper event listeners
+    - Uses data-nap-index attribute to store index
+    - Attaches listeners after HTML is rendered
+    - Should fix edit/delete not working at all
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2957,12 +2957,27 @@
                             </div>
                         </div>
                         <div class="saved-nap-actions">
-                            <button class="edit-btn" onclick="editNap(${index})">✏️ Edit</button>
-                            <button class="delete-btn" onclick="deleteNap(${index})">🗑️ Delete</button>
+                            <button class="edit-btn" data-nap-index="${index}">✏️ Edit</button>
+                            <button class="delete-btn" data-nap-index="${index}">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
             }).join('');
+            
+            // Add event listeners after HTML is rendered
+            document.querySelectorAll('.saved-nap .edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-nap-index'));
+                    editNap(index);
+                });
+            });
+            
+            document.querySelectorAll('.saved-nap .delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-nap-index'));
+                    deleteNap(index);
+                });
+            });
         }
 
         function editNap(napIndex) {
