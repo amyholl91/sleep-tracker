@@ -2058,9 +2058,10 @@
                     bedtimeText = 'Bedtime logged';
                 }
                 
+                const babyName = localStorage.getItem('baby-name') || 'Baby';
                 display.innerHTML = `
                     <div class="next-sleep-window sleeping">
-                        <h3>😴 ${settings.babyName || 'Baby'} is Sleeping</h3>
+                        <h3>😴 ${babyName} is Sleeping</h3>
                         <div class="next-sleep-time">Good Night 🌙</div>
                         <div class="next-sleep-countdown">
                             ${bedtimeText}
@@ -2183,7 +2184,8 @@
                 const pastLabel = isBedtime ? '🌙 Bedtime Window Passed' : '⏰ Last Sleep Window';
                 
                 // Show "Baby Asleep" button if it's after 6:30 PM (based on current time)
-                const bedtimeButtonText = settings.babyName ? `😴 ${settings.babyName} Asleep - Log Bedtime` : `😴 Baby Asleep - Log Bedtime`;
+                const babyName = localStorage.getItem('baby-name') || 'Baby';
+                const bedtimeButtonText = `😴 ${babyName} Asleep - Log Bedtime`;
                 const bedtimeButton = isAfterBedtime ? `
                     <button onclick="logBedtime()" style="
                         margin-top: 12px;
@@ -2221,7 +2223,8 @@
                 const minutesUntil = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
                 
                 // Show bedtime button even if wake window hasn't arrived, if it's after 6:30 PM
-                const bedtimeButtonText = settings.babyName ? `😴 ${settings.babyName} Asleep - Log Bedtime` : `😴 Baby Asleep - Log Bedtime`;
+                const babyName = localStorage.getItem('baby-name') || 'Baby';
+                const bedtimeButtonText = `😴 ${babyName} Asleep - Log Bedtime`;
                 const bedtimeButton = isAfterBedtime ? `
                     <button onclick="logBedtime()" style="
                         margin-top: 12px;
