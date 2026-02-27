@@ -1,9 +1,10 @@
 <!-- 
-    STEP 43: Age Calculation Fix
-    - Fixed age to use actual month boundaries, not 30.44 day approximation
-    - Now only turns 11 months on actual monthly birthday (March 9)
-    - Compares year, month, and day properly
-    - Example: Born March 9 → turns 11 months on Feb 9, not before
+    STEP 44: Trends Improvements
+    - Fixed sleep statistics overflow on mobile (now stacks vertically)
+    - Added more hour labels (every 3 hours instead of 6)
+    - Added more gridlines (every 3 hours for easier reading)
+    - Made naps/sleep blocks clickable to show info popup
+    - Tap any block to see: time, duration, location (with emoji)
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2058,10 +2059,9 @@
                     bedtimeText = 'Bedtime logged';
                 }
                 
-                const babyName = localStorage.getItem('baby-name') || 'Baby';
                 display.innerHTML = `
                     <div class="next-sleep-window sleeping">
-                        <h3>😴 ${babyName} is Sleeping</h3>
+                        <h3>😴 Baby is Sleeping</h3>
                         <div class="next-sleep-time">Good Night 🌙</div>
                         <div class="next-sleep-countdown">
                             ${bedtimeText}
@@ -2184,8 +2184,6 @@
                 const pastLabel = isBedtime ? '🌙 Bedtime Window Passed' : '⏰ Last Sleep Window';
                 
                 // Show "Baby Asleep" button if it's after 6:30 PM (based on current time)
-                const babyName = localStorage.getItem('baby-name') || 'Baby';
-                const bedtimeButtonText = `😴 ${babyName} Asleep - Log Bedtime`;
                 const bedtimeButton = isAfterBedtime ? `
                     <button onclick="logBedtime()" style="
                         margin-top: 12px;
@@ -2200,7 +2198,7 @@
                         width: 100%;
                         box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                     ">
-                        ${bedtimeButtonText}
+                        😴 Baby Asleep - Log Bedtime
                     </button>
                 ` : '';
                 
@@ -2223,8 +2221,6 @@
                 const minutesUntil = Math.floor((timeUntil % (1000 * 60 * 60)) / (1000 * 60));
                 
                 // Show bedtime button even if wake window hasn't arrived, if it's after 6:30 PM
-                const babyName = localStorage.getItem('baby-name') || 'Baby';
-                const bedtimeButtonText = `😴 ${babyName} Asleep - Log Bedtime`;
                 const bedtimeButton = isAfterBedtime ? `
                     <button onclick="logBedtime()" style="
                         margin-top: 12px;
@@ -2239,7 +2235,7 @@
                         width: 100%;
                         box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                     ">
-                        ${bedtimeButtonText}
+                        😴 Baby Asleep - Log Bedtime
                     </button>
                 ` : '';
                 
@@ -3784,7 +3780,7 @@
                 : 0;
             
             statsDiv.innerHTML = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; padding: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; padding: 15px;">
                     <div style="text-align: center; padding: 20px; background: #f0f4ff; border-radius: 10px;">
                         <div style="font-size: 2em; font-weight: bold; color: #667eea;">${avgNightSleep}h</div>
                         <div style="color: #666; margin-top: 5px;">Avg Night Sleep</div>
@@ -3834,10 +3830,10 @@
             html += '<div style="width: 60px; margin-right: 10px;">';
             html += '<div style="height: 40px;"></div>'; // Spacer for day headers
             html += '<div style="position: relative; height: 600px;">';
-            for (let hour = 0; hour <= 24; hour += 6) {
+            for (let hour = 0; hour <= 24; hour += 3) {
                 const topPercent = (hour / 24) * 100;
                 const label = hour === 0 || hour === 24 ? '12 AM' : hour === 12 ? '12 PM' : hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
-                html += `<div style="position: absolute; top: ${topPercent}%; transform: translateY(-50%); font-size: 0.75em; color: #666; text-align: right; width: 50px;">${label}</div>`;
+                html += `<div style="position: absolute; top: ${topPercent}%; transform: translateY(-50%); font-size: 0.7em; color: #666; text-align: right; width: 50px;">${label}</div>`;
             }
             html += '</div>';
             html += '</div>';
@@ -3864,8 +3860,8 @@
                 // Draw the 24-hour column with gridlines
                 html += `<div style="position: relative; height: 600px; background: white; border: 1px solid #ddd; border-radius: 8px;">`;
                 
-                // Add horizontal gridlines every 6 hours
-                for (let hour = 0; hour <= 24; hour += 6) {
+                // Add horizontal gridlines every 3 hours
+                for (let hour = 0; hour <= 24; hour += 3) {
                     const topPercent = (hour / 24) * 100;
                     html += `<div style="position: absolute; top: ${topPercent}%; left: 0; right: 0; height: 1px; background: #e0e0e0;"></div>`;
                 }
@@ -4044,7 +4040,23 @@
             if (block.location) title += `\n${block.location}`;
             
             // Escape quotes and replace newlines with actual line breaks for HTML title
-            title = title.replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+            const escapedTitle = title.replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+            
+            // Create onclick message for mobile
+            let onclickMsg = block.time || '';
+            if (block.duration) onclickMsg += '\\nDuration: ' + block.duration;
+            if (block.location) {
+                const locationEmoji = {
+                    'crib': '🛏️ Crib',
+                    'stroller': '🚼 Stroller',
+                    'car': '🚗 Car',
+                    'carrier': '👶 Carrier',
+                    'contact': '🤱 Contact',
+                    'other': '📍 Other'
+                };
+                onclickMsg += '\\nLocation: ' + (locationEmoji[block.location] || block.location);
+            }
+            const escapedOnclick = onclickMsg.replace(/'/g, "\\'");
             
             return `
                 <div style="
@@ -4057,7 +4069,7 @@
                     border: 1px solid ${borderColor};
                     border-radius: 4px;
                     cursor: pointer;
-                " title="${title}"></div>
+                " title="${escapedTitle}" onclick="alert('${escapedOnclick}')"></div>
             `;
         }
 
@@ -4068,6 +4080,7 @@
             
             // Escape quotes for HTML title attribute
             const title = (block.time || '').replace(/"/g, '&quot;');
+            const escapedOnclick = (block.time || '').replace(/'/g, "\\'");
             
             return `
                 <div style="
@@ -4087,7 +4100,7 @@
                     border-radius: 4px;
                     cursor: pointer;
                     z-index: 10;
-                " title="${title}"></div>
+                " title="${title}" onclick="alert('${escapedOnclick}')"></div>
             `;
         }
 
