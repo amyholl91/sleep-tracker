@@ -1,10 +1,13 @@
 <!-- 
-    STEP 44: Trends Improvements
-    - Fixed sleep statistics overflow on mobile (now stacks vertically)
-    - Added more hour labels (every 3 hours instead of 6)
-    - Added more gridlines (every 3 hours for easier reading)
-    - Made naps/sleep blocks clickable to show info popup
-    - Tap any block to see: time, duration, location (with emoji)
+    STEP 45: Calendar History View
+    - Replaced boring data dump with interactive month calendar
+    - Each day shows total sleep hours
+    - Color-coded: Green (12+h), Yellow (10-12h), Red (<10h)
+    - Click any day to see full details
+    - Navigate between months with arrows
+    - Today highlighted with blue border
+    - Future dates grayed out
+    - Edit button opens day in tracker tab
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1577,17 +1580,36 @@
 
             <!-- History Tab -->
             <div id="history-tab" class="tab-content">
-                <div class="date-nav">
-                    <button id="history-prev-date">← Previous</button>
-                    <h2 id="history-date-display"></h2>
-                    <button id="history-next-date">Next →</button>
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <button onclick="changeHistoryMonth(-1)" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            ← Prev
+                        </button>
+                        <h3 id="history-month-display" style="margin: 0;"></h3>
+                        <button onclick="changeHistoryMonth(1)" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Next →
+                        </button>
+                    </div>
+                    
+                    <div id="history-calendar"></div>
                 </div>
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <button class="primary-btn" onclick="editHistoryDate()" style="padding: 12px 30px;">
-                        ✏️ Edit This Day
-                    </button>
+                
+                <div id="history-day-detail" style="display: none;">
+                    <div class="card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 id="history-detail-date" style="margin: 0;"></h3>
+                            <button onclick="closeHistoryDetail()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                ✕ Close
+                            </button>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0;">
+                            <button class="primary-btn" onclick="editHistoryDate()" style="padding: 12px 30px;">
+                                ✏️ Edit This Day
+                            </button>
+                        </div>
+                        <div id="history-entries"></div>
+                    </div>
                 </div>
-                <div id="history-entries"></div>
             </div>
 
             <!-- Trends Tab -->
@@ -1741,7 +1763,7 @@
             initializeTabs();
             initializeTrackerTab();
             initializePlannerTab();
-            initializeHistoryTab();
+            // History tab now uses calendar view
             updateDateDisplay();
             loadBabyInfo();
             loadDailySleepData();
@@ -2547,8 +2569,7 @@
             document.getElementById(tabName + '-tab').classList.add('active');
 
             if (tabName === 'history') {
-                loadHistoryEntries();
-                updateHistoryDateDisplay();
+                renderHistoryCalendar();
             } else if (tabName === 'trends') {
                 loadTrendsData();
             }
@@ -3512,10 +3533,7 @@
             return null;
         }
 
-        function initializeHistoryTab() {
-            document.getElementById('history-prev-date').addEventListener('click', () => changeDate(-1));
-            document.getElementById('history-next-date').addEventListener('click', () => changeDate(1));
-        }
+        // Removed old history navigation - now using calendar view
 
         function updateHistoryDateDisplay() {
             const date = new Date(currentDate + 'T00:00:00');
@@ -3624,6 +3642,148 @@
                     </div>
                 </div>
             `;
+        }
+
+        let historyViewMonth = new Date();
+        let selectedHistoryDate = null;
+
+        function changeHistoryMonth(direction) {
+            historyViewMonth.setMonth(historyViewMonth.getMonth() + direction);
+            renderHistoryCalendar();
+        }
+
+        function renderHistoryCalendar() {
+            const monthDisplay = document.getElementById('history-month-display');
+            const calendarDiv = document.getElementById('history-calendar');
+            
+            monthDisplay.textContent = historyViewMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            const year = historyViewMonth.getFullYear();
+            const month = historyViewMonth.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+            const daysInMonth = lastDay.getDate();
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 15px;">';
+            
+            // Day headers
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(day => {
+                html += `<div style="text-align: center; font-weight: bold; color: #667eea; padding: 10px 0;">${day}</div>`;
+            });
+            
+            // Empty cells before first day
+            for (let i = 0; i < startDayOfWeek; i++) {
+                html += '<div></div>';
+            }
+            
+            // Calendar days
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const isToday = date.getTime() === today.getTime();
+                const isFuture = date > today;
+                
+                // Get sleep data
+                const key = `daily-sleep-${dateStr}`;
+                const stored = localStorage.getItem(key);
+                let totalHours = 0;
+                let hasData = false;
+                
+                if (stored && !isFuture) {
+                    hasData = true;
+                    const data = JSON.parse(stored);
+                    
+                    // Calculate total sleep
+                    if (data.bedtime && data.wakeTime) {
+                        const bedtime = new Date(data.bedtime);
+                        const wakeTime = new Date(data.wakeTime);
+                        let diff = wakeTime - bedtime;
+                        if (diff < 0) diff += 24 * 60 * 60 * 1000;
+                        totalHours += diff / (1000 * 60 * 60);
+                        
+                        // Subtract wake-ups
+                        if (data.wakeups) {
+                            data.wakeups.forEach(w => {
+                                if (w.durationMinutes) totalHours -= w.durationMinutes / 60;
+                            });
+                        }
+                    }
+                    
+                    // Add naps
+                    if (data.naps) {
+                        data.naps.forEach(nap => {
+                            if (nap.durationMinutes) totalHours += nap.durationMinutes / 60;
+                        });
+                    }
+                }
+                
+                // Color based on sleep amount
+                let bgColor = '#f5f5f5';
+                let textColor = '#999';
+                if (hasData) {
+                    if (totalHours >= 12) {
+                        bgColor = '#d1fae5'; // Good sleep - green
+                        textColor = '#065f46';
+                    } else if (totalHours >= 10) {
+                        bgColor = '#fef3c7'; // OK sleep - yellow
+                        textColor = '#92400e';
+                    } else {
+                        bgColor = '#fee2e2'; // Low sleep - red
+                        textColor = '#991b1b';
+                    }
+                }
+                
+                const todayBorder = isToday ? 'border: 3px solid #667eea;' : '';
+                const cursor = (hasData || isToday) ? 'cursor: pointer;' : '';
+                const opacity = isFuture ? 'opacity: 0.3;' : '';
+                
+                html += `
+                    <div onclick="${!isFuture ? `showHistoryDay('${dateStr}')` : ''}" style="
+                        aspect-ratio: 1;
+                        background: ${bgColor};
+                        border-radius: 8px;
+                        padding: 8px;
+                        text-align: center;
+                        ${todayBorder}
+                        ${cursor}
+                        ${opacity}
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                    ">
+                        <div style="font-weight: bold; font-size: 1.1em; color: ${textColor};">${day}</div>
+                        ${hasData ? `<div style="font-size: 0.75em; color: ${textColor}; margin-top: 4px;">${totalHours.toFixed(1)}h</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            calendarDiv.innerHTML = html;
+        }
+
+        function showHistoryDay(dateStr) {
+            selectedHistoryDate = dateStr;
+            currentDate = dateStr; // Update global for edit functionality
+            
+            const date = new Date(dateStr + 'T00:00:00');
+            document.getElementById('history-detail-date').textContent = 
+                date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            document.getElementById('history-day-detail').style.display = 'block';
+            loadHistoryEntries();
+            
+            // Scroll to detail
+            document.getElementById('history-day-detail').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeHistoryDetail() {
+            document.getElementById('history-day-detail').style.display = 'none';
         }
 
         function editHistoryDate() {
