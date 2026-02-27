@@ -1,13 +1,13 @@
 <!-- 
-    STEP 45: Calendar History View
-    - Replaced boring data dump with interactive month calendar
-    - Each day shows total sleep hours
-    - Color-coded: Green (12+h), Yellow (10-12h), Red (<10h)
-    - Click any day to see full details
-    - Navigate between months with arrows
-    - Today highlighted with blue border
-    - Future dates grayed out
-    - Edit button opens day in tracker tab
+    STEP 46: Calendar Mobile Fix
+    - Reduced gap from 5px to 3px
+    - Reduced padding from 15px to 8px
+    - Smaller day headers (0.75em font)
+    - Smaller day cells (0.95em numbers, 0.65em hours)
+    - Reduced cell padding from 8px to 4px
+    - Today border from 3px to 2px
+    - Added min-width: 0 to prevent overflow
+    - All 7 days now fit on mobile screen!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -3665,12 +3665,12 @@
             const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
             const daysInMonth = lastDay.getDate();
             
-            let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 15px;">';
+            let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 8px;">';
             
             // Day headers
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayNames.forEach(day => {
-                html += `<div style="text-align: center; font-weight: bold; color: #667eea; padding: 10px 0;">${day}</div>`;
+                html += `<div style="text-align: center; font-weight: bold; color: #667eea; padding: 5px 0; font-size: 0.75em;">${day}</div>`;
             });
             
             // Empty cells before first day
@@ -3738,7 +3738,7 @@
                     }
                 }
                 
-                const todayBorder = isToday ? 'border: 3px solid #667eea;' : '';
+                const todayBorder = isToday ? 'border: 2px solid #667eea;' : '';
                 const cursor = (hasData || isToday) ? 'cursor: pointer;' : '';
                 const opacity = isFuture ? 'opacity: 0.3;' : '';
                 
@@ -3746,8 +3746,8 @@
                     <div onclick="${!isFuture ? `showHistoryDay('${dateStr}')` : ''}" style="
                         aspect-ratio: 1;
                         background: ${bgColor};
-                        border-radius: 8px;
-                        padding: 8px;
+                        border-radius: 6px;
+                        padding: 4px;
                         text-align: center;
                         ${todayBorder}
                         ${cursor}
@@ -3756,9 +3756,10 @@
                         flex-direction: column;
                         justify-content: center;
                         align-items: center;
+                        min-width: 0;
                     ">
-                        <div style="font-weight: bold; font-size: 1.1em; color: ${textColor};">${day}</div>
-                        ${hasData ? `<div style="font-size: 0.75em; color: ${textColor}; margin-top: 4px;">${totalHours.toFixed(1)}h</div>` : ''}
+                        <div style="font-weight: bold; font-size: 0.95em; color: ${textColor};">${day}</div>
+                        ${hasData ? `<div style="font-size: 0.65em; color: ${textColor}; margin-top: 2px;">${totalHours.toFixed(1)}h</div>` : ''}
                     </div>
                 `;
             }
