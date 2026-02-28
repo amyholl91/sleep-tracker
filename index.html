@@ -1,14 +1,9 @@
 <!-- 
-    STEP 48: Proactive Nap Alert
-    - Changed alert to show BEFORE ideal wake time, not after
-    - Shows countdown starting at 60 minutes before ideal end
-    - Three urgency levels:
-      * Blue (60-31 min): "ℹ️ Wake by 4:30 PM - 45 minutes remaining"
-      * Orange (30-16 min): "⏰ Wake by 4:30 PM - 20 minutes remaining"  
-      * Red (15-0 min): "⚠️ Wake by 4:30 PM - 5 minutes remaining"
-      * Dark Red (past): "🚨 Wake Baby Now! - Should have woken 5 min ago"
-    - Requires nap to be at least 20 minutes before showing alert
-    - Proactive instead of reactive!
+    STEP 49: Critical Syntax Fix
+    - FIXED: Removed duplicate else block in updateNapAlert
+    - Was breaking all JavaScript, preventing app from loading
+    - All your data is safe in localStorage
+    - App should work normally again
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2543,9 +2538,6 @@
                         </div>
                     </div>
                 `;
-            } else {
-                display.innerHTML = '';
-            }
             } else {
                 display.innerHTML = '';
             }
