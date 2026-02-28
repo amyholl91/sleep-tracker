@@ -1,13 +1,10 @@
 <!-- 
-    STEP 50: Proactive Nap Alert (Fixed)
-    - Shows countdown alert starting at 60 min before ideal wake time (was 30 min)
-    - Color changes based on urgency:
-      * Blue: 60-31 minutes remaining
-      * Orange: 30-16 minutes remaining
-      * Red: 15-0 minutes remaining
-    - Message: "⏰ Wake By 4:30 PM - 45 minutes remaining"
-    - More time to plan instead of just reacting
-    - SYNTAX VERIFIED - All brackets correct
+    STEP 51: Simpler Alert Logic
+    - Removed complex "projected nap end" logic that was preventing alerts
+    - Now simply: if within 60 min of ideal wake time AND nap is 20+ min → show countdown
+    - No longer waits for nap to be "projected" to interfere
+    - Should trigger countdown more reliably
+    - Alert appears as soon as you're 60 min from deadline (if nap is 20+ min old)
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2497,10 +2494,12 @@
             
             const projectedNapEnd = new Date(activeNap.startTime.getTime() + typicalNapMinutes * 60000);
             
-            // Only alert if the nap WOULD interfere with bedtime if it goes a typical length
-            // OR if it's already gone past the ideal end time
+            // Calculate time until ideal end
+            const timeUntilIdealEnd = idealNapEndTime - now;
+            const minutesUntilIdealEnd = Math.floor(timeUntilIdealEnd / (1000 * 60));
+            
             if (now > idealNapEndTime) {
-                // Nap has already gone past ideal end time
+                // Already past ideal end time - RED ALERT
                 const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
@@ -2511,39 +2510,32 @@
                 
                 display.innerHTML = `
                     <div class="nap-alert">
-                        <h3>⏰ Wake Baby Alert!</h3>
+                        <h3>🚨 Wake Baby Now!</h3>
                         <div class="nap-alert-time">${napEndTimeStr}</div>
                         <div class="nap-alert-message">
-                            Nap should have ended ${minutesOverdue} minutes ago to protect bedtime
+                            Should have woken ${minutesOverdue} min ago to protect bedtime
                         </div>
                     </div>
                 `;
-            } else if (projectedNapEnd > idealNapEndTime && napMinutes > 30) {
-                // Nap is likely to interfere if it goes normal length, and has been going for a bit
-                const timeUntilIdealEnd = idealNapEndTime - now;
-                const minutesUntil = Math.floor(timeUntilIdealEnd / (1000 * 60));
+            } else if (minutesUntilIdealEnd <= 60 && napMinutes >= 20) {
+                // Show countdown when within 60 min of ideal end (and nap is at least 20 min)
+                const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
                 
-                if (minutesUntil <= 60) {
-                    const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit',
-                        hour12: true 
-                    });
-                    
-                    const bgColor = minutesUntil <= 15 ? '#ef4444' : minutesUntil <= 30 ? '#f59e0b' : '#3b82f6';
-                    
-                    display.innerHTML = `
-                        <div class="nap-alert" style="background: ${bgColor};">
-                            <h3>⏰ Wake By ${napEndTimeStr}</h3>
-                            <div class="nap-alert-time">${minutesUntil} minutes remaining</div>
-                            <div class="nap-alert-message">
-                                Wake by ${napEndTimeStr} to protect bedtime
-                            </div>
+                const bgColor = minutesUntilIdealEnd <= 15 ? '#ef4444' : minutesUntilIdealEnd <= 30 ? '#f59e0b' : '#3b82f6';
+                
+                display.innerHTML = `
+                    <div class="nap-alert" style="background: ${bgColor};">
+                        <h3>⏰ Wake By ${napEndTimeStr}</h3>
+                        <div class="nap-alert-time">${minutesUntilIdealEnd} minutes remaining</div>
+                        <div class="nap-alert-message">
+                            Wake by ${napEndTimeStr} to protect bedtime
                         </div>
-                    `;
-                } else {
-                    display.innerHTML = '';
-                }
+                    </div>
+                `;
             } else {
                 display.innerHTML = '';
             }
