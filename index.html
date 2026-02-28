@@ -1,14 +1,13 @@
 <!-- 
-    STEP 47: Calendar Even Tighter
-    - Removed all padding from grid container (0 instead of 8px)
-    - Added negative margin to expand beyond card padding
-    - Gap reduced to 2px (was 3px)
-    - Cell padding: 2px (was 4px)
-    - Day headers: 0.7em font (was 0.75em)
-    - Day numbers: 0.9em (was 0.95em)
-    - Hours text: 0.6em (was 0.65em)
-    - Added overflow: hidden to cells
-    - Should now fit all 7 days on screen!
+    STEP 50: Proactive Nap Alert (Fixed)
+    - Shows countdown alert starting at 60 min before ideal wake time (was 30 min)
+    - Color changes based on urgency:
+      * Blue: 60-31 minutes remaining
+      * Orange: 30-16 minutes remaining
+      * Red: 15-0 minutes remaining
+    - Message: "⏰ Wake By 4:30 PM - 45 minutes remaining"
+    - More time to plan instead of just reacting
+    - SYNTAX VERIFIED - All brackets correct
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2524,19 +2523,21 @@
                 const timeUntilIdealEnd = idealNapEndTime - now;
                 const minutesUntil = Math.floor(timeUntilIdealEnd / (1000 * 60));
                 
-                if (minutesUntil <= 30) {
+                if (minutesUntil <= 60) {
                     const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
                         hour: 'numeric', 
                         minute: '2-digit',
                         hour12: true 
                     });
                     
+                    const bgColor = minutesUntil <= 15 ? '#ef4444' : minutesUntil <= 30 ? '#f59e0b' : '#3b82f6';
+                    
                     display.innerHTML = `
-                        <div class="nap-alert" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                            <h3>⚠️ Nap Ending Soon</h3>
-                            <div class="nap-alert-time">${napEndTimeStr}</div>
+                        <div class="nap-alert" style="background: ${bgColor};">
+                            <h3>⏰ Wake By ${napEndTimeStr}</h3>
+                            <div class="nap-alert-time">${minutesUntil} minutes remaining</div>
                             <div class="nap-alert-message">
-                                Consider waking in ${minutesUntil} minutes to protect bedtime
+                                Wake by ${napEndTimeStr} to protect bedtime
                             </div>
                         </div>
                     `;
