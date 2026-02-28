@@ -1,13 +1,14 @@
 <!-- 
-    STEP 46: Calendar Mobile Fix
-    - Reduced gap from 5px to 3px
-    - Reduced padding from 15px to 8px
-    - Smaller day headers (0.75em font)
-    - Smaller day cells (0.95em numbers, 0.65em hours)
-    - Reduced cell padding from 8px to 4px
-    - Today border from 3px to 2px
-    - Added min-width: 0 to prevent overflow
-    - All 7 days now fit on mobile screen!
+    STEP 48: Proactive Nap Alert
+    - Changed alert to show BEFORE ideal wake time, not after
+    - Shows countdown starting at 60 minutes before ideal end
+    - Three urgency levels:
+      * Blue (60-31 min): "ℹ️ Wake by 4:30 PM - 45 minutes remaining"
+      * Orange (30-16 min): "⏰ Wake by 4:30 PM - 20 minutes remaining"  
+      * Red (15-0 min): "⚠️ Wake by 4:30 PM - 5 minutes remaining"
+      * Dark Red (past): "🚨 Wake Baby Now! - Should have woken 5 min ago"
+    - Requires nap to be at least 20 minutes before showing alert
+    - Proactive instead of reactive!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2499,8 +2500,11 @@
             
             // Only alert if the nap WOULD interfere with bedtime if it goes a typical length
             // OR if it's already gone past the ideal end time
+            const timeUntilIdealEnd = idealNapEndTime - now;
+            const minutesUntilIdealEnd = Math.floor(timeUntilIdealEnd / (1000 * 60));
+            
             if (now > idealNapEndTime) {
-                // Nap has already gone past ideal end time
+                // Nap has already gone past ideal end time - RED ALERT
                 const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
@@ -2511,37 +2515,37 @@
                 
                 display.innerHTML = `
                     <div class="nap-alert">
-                        <h3>⏰ Wake Baby Alert!</h3>
+                        <h3>🚨 Wake Baby Now!</h3>
                         <div class="nap-alert-time">${napEndTimeStr}</div>
                         <div class="nap-alert-message">
-                            Nap should have ended ${minutesOverdue} minutes ago to protect bedtime
+                            Should have woken ${minutesOverdue} min ago to protect bedtime
                         </div>
                     </div>
                 `;
-            } else if (projectedNapEnd > idealNapEndTime && napMinutes > 30) {
-                // Nap is likely to interfere if it goes normal length, and has been going for a bit
-                const timeUntilIdealEnd = idealNapEndTime - now;
-                const minutesUntil = Math.floor(timeUntilIdealEnd / (1000 * 60));
+            } else if (minutesUntilIdealEnd <= 60 && napMinutes >= 20) {
+                // Show countdown warning when within 60 minutes of ideal end time
+                const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
                 
-                if (minutesUntil <= 30) {
-                    const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
-                        hour: 'numeric', 
-                        minute: '2-digit',
-                        hour12: true 
-                    });
-                    
-                    display.innerHTML = `
-                        <div class="nap-alert" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                            <h3>⚠️ Nap Ending Soon</h3>
-                            <div class="nap-alert-time">${napEndTimeStr}</div>
-                            <div class="nap-alert-message">
-                                Consider waking in ${minutesUntil} minutes to protect bedtime
-                            </div>
+                const urgency = minutesUntilIdealEnd <= 15 ? 'urgent' : minutesUntilIdealEnd <= 30 ? 'warning' : 'info';
+                const bgColor = urgency === 'urgent' ? '#ef4444' : urgency === 'warning' ? '#f59e0b' : '#3b82f6';
+                const icon = urgency === 'urgent' ? '⚠️' : urgency === 'warning' ? '⏰' : 'ℹ️';
+                
+                display.innerHTML = `
+                    <div class="nap-alert" style="background: ${bgColor};">
+                        <h3>${icon} Wake By ${napEndTimeStr}</h3>
+                        <div class="nap-alert-time">${minutesUntilIdealEnd} minutes remaining</div>
+                        <div class="nap-alert-message">
+                            Wake by ${napEndTimeStr} to protect bedtime routine
                         </div>
-                    `;
-                } else {
-                    display.innerHTML = '';
-                }
+                    </div>
+                `;
+            } else {
+                display.innerHTML = '';
+            }
             } else {
                 display.innerHTML = '';
             }
@@ -3665,12 +3669,12 @@
             const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
             const daysInMonth = lastDay.getDate();
             
-            let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 8px;">';
+            let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0; margin: -10px -15px -15px -15px;">';
             
             // Day headers
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayNames.forEach(day => {
-                html += `<div style="text-align: center; font-weight: bold; color: #667eea; padding: 5px 0; font-size: 0.75em;">${day}</div>`;
+                html += `<div style="text-align: center; font-weight: bold; color: #667eea; padding: 8px 2px; font-size: 0.7em;">${day}</div>`;
             });
             
             // Empty cells before first day
@@ -3746,8 +3750,8 @@
                     <div onclick="${!isFuture ? `showHistoryDay('${dateStr}')` : ''}" style="
                         aspect-ratio: 1;
                         background: ${bgColor};
-                        border-radius: 6px;
-                        padding: 4px;
+                        border-radius: 4px;
+                        padding: 2px;
                         text-align: center;
                         ${todayBorder}
                         ${cursor}
@@ -3757,9 +3761,10 @@
                         justify-content: center;
                         align-items: center;
                         min-width: 0;
+                        overflow: hidden;
                     ">
-                        <div style="font-weight: bold; font-size: 0.95em; color: ${textColor};">${day}</div>
-                        ${hasData ? `<div style="font-size: 0.65em; color: ${textColor}; margin-top: 2px;">${totalHours.toFixed(1)}h</div>` : ''}
+                        <div style="font-weight: bold; font-size: 0.9em; color: ${textColor}; line-height: 1;">${day}</div>
+                        ${hasData ? `<div style="font-size: 0.6em; color: ${textColor}; margin-top: 2px; line-height: 1;">${totalHours.toFixed(1)}h</div>` : ''}
                     </div>
                 `;
             }
