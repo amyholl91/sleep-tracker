@@ -1,9 +1,10 @@
 <!-- 
-    STEP 61: Sleep Window Loading Fix
-    - Fixed sleep window not showing after page refresh
-    - Made initialization wait for Firestore data to load before calculating sleep window
-    - Removed duplicate updateNextSleepWindow() call
-    - Now properly shows on page load!
+    STEP 62: Sleep Window Multiple Fixes
+    - Added updateNextSleepWindow() back to loadDailySleepData() (was missing!)
+    - Added updateActiveNapDisplay() to loadDailySleepData() too
+    - Made timer update every 10 seconds instead of 60 (faster refresh)
+    - Explicitly call updateNextSleepWindow() after data loads in initialization
+    - Should now consistently show after refresh and update quickly
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1826,7 +1827,7 @@
             setupLocationButtons();
             setupNapInputs();
             setupCheckbox();
-            // updateNextSleepWindow(); // Don't call here - loadDailySleepData already calls it
+            updateNextSleepWindow(); // Call it explicitly after data loads to ensure it runs
             updateLoggedBedtimeDisplay();
             startSleepWindowTimer();
         });
@@ -2028,6 +2029,8 @@
             renderSavedNaps();
             renderSavedWakeups();
             updateSummary();
+            updateNextSleepWindow(); // Update sleep window after data loads
+            updateActiveNapDisplay(); // Update active nap display after data loads
         }
 
         async function saveDailySleepData() {
@@ -2063,7 +2066,7 @@
         }
 
         function startSleepWindowTimer() {
-            sleepWindowInterval = setInterval(updateNextSleepWindow, 60000);
+            sleepWindowInterval = setInterval(updateNextSleepWindow, 10000); // Update every 10 seconds
         }
 
         function updateActiveNapDisplay() {
