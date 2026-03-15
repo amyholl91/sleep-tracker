@@ -1,19 +1,10 @@
 <!-- 
-    STEP 55: 🔥 FIREBASE INTEGRATION - DATA NOW CLOUD-BACKED! 🔥
-    - Added Firebase/Firestore integration (same project as book tracker & restaurant app)
-    - All sleep data now saves to Firestore automatically
-    - Dual storage: Firestore (primary/cloud) + localStorage (backup/local)
-    - Data syncs across devices and survives iOS localStorage clearing
-    - Never lose data again!
-    - Firestore collections: sleepData (daily entries) + settings (baby info)
-    - Compatible with existing localStorage data
-    - Falls back gracefully if offline
-    
-    PREVIOUS FEATURES STILL WORKING:
-    - Proactive nap alerts (60-min countdown before bedtime interference)
-    - Weekly visual schedule with clickable blocks
-    - Calendar history view (color-coded by sleep quality)
-    - Age calculation, edit/delete naps, all mobile-responsive
+    STEP 58: Active Nap Date Fix
+    - Active nap timer now only shows when viewing TODAY's date
+    - When viewing past dates, manual nap entry is always available
+    - Active nap keeps running in background when you switch dates
+    - Can now backfill historical data while a nap is active!
+    - Example: Active nap at 2 PM today → switch to yesterday → add yesterday's naps → switch back to today → active nap still running
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1351,15 +1342,6 @@
                 <span>📅</span>
                 <span id="baby-display-age">Set up baby info</span>
             </div>
-            <button onclick="checkAllData()" style="
-                padding: 5px 10px;
-                background: #10b981;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 0.8em;
-                cursor: pointer;
-            ">🔍 Check Data</button>
         </div>
 
         <div class="content">
@@ -1731,6 +1713,25 @@
             </div>
 
             <div class="settings-section">
+                <h3>☁️ Cloud Backup</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">
+                    Your data is backed up to Firebase. Sync manually or check what's stored.
+                </p>
+                
+                <button class="primary-btn" onclick="syncAllToFirebase()" style="width: 100%; margin-bottom: 10px;">
+                    🔄 Sync All Data to Cloud
+                </button>
+                
+                <button class="secondary-btn" onclick="checkAllData()" style="width: 100%;">
+                    🔍 Check Data Status
+                </button>
+                
+                <p style="color: #10b981; font-size: 0.85em; margin-top: 10px;">
+                    ✓ Safe to sync multiple times - won't create duplicates!
+                </p>
+            </div>
+
+            <div class="settings-section">
                 <h3>💾 Backup & Restore</h3>
                 <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">
                     Your data is saved on this device. Back it up regularly!
@@ -1863,6 +1864,54 @@
             alert(message);
             console.log('Full data:', allData);
             return allData;
+        }
+
+        // SYNC FUNCTION - Upload all localStorage data to Firestore
+        async function syncAllToFirebase() {
+            if (!firebaseInitialized || !db) {
+                alert('❌ Firebase is not connected. Cannot sync to cloud.');
+                return;
+            }
+            
+            const allData = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('daily-sleep-')) {
+                    allData[key] = JSON.parse(localStorage.getItem(key));
+                }
+            }
+            
+            const dates = Object.keys(allData);
+            
+            if (dates.length === 0) {
+                alert('📭 No sleep data found to sync!');
+                return;
+            }
+            
+            const confirmSync = confirm(`☁️ Upload ${dates.length} days of sleep data to cloud?\n\nThis is safe to do multiple times - won't create duplicates!`);
+            
+            if (!confirmSync) return;
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const key of dates) {
+                const dateStr = key.replace('daily-sleep-', '');
+                const data = allData[key];
+                data.date = dateStr;
+                data.lastModified = new Date().toISOString();
+                
+                try {
+                    await db.collection('sleepData').doc(dateStr).set(data);
+                    successCount++;
+                    console.log('✅ Synced:', dateStr);
+                } catch (error) {
+                    failCount++;
+                    console.error('❌ Failed to sync:', dateStr, error);
+                }
+            }
+            
+            alert(`✅ Cloud Sync Complete!\n\n✓ ${successCount} days uploaded\n${failCount > 0 ? `✗ ${failCount} days failed` : ''}\n\nYour data is now backed up to Firebase!`);
         }
 
         function setupCheckbox() {
@@ -2010,11 +2059,27 @@
 
         function updateActiveNapDisplay() {
             const display = document.getElementById('active-nap-display');
+            const manualEntry = document.getElementById('manual-nap-entry');
+            const startBtn = document.getElementById('start-nap-btn');
             
-            if (!activeNap) {
+            // Get today's date
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            // Only show active nap if we have one AND we're viewing today's date
+            const isViewingToday = currentDate === todayStr;
+            
+            if (!activeNap || !isViewingToday) {
                 display.innerHTML = '';
+                // If viewing a past date, always show manual entry even if there's an active nap today
+                if (manualEntry) manualEntry.style.display = 'block';
+                if (startBtn) startBtn.style.display = 'block';
                 return;
             }
+
+            // We have an active nap and we're viewing today - show the timer
+            if (manualEntry) manualEntry.style.display = 'none';
+            if (startBtn) startBtn.style.display = 'none';
 
             const now = new Date();
             const start = new Date(activeNap.startTime);
@@ -3212,6 +3277,7 @@
             updateDateDisplay();
             loadDailySleepData();
             updateNextSleepWindow();
+            updateActiveNapDisplay(); // Refresh to show/hide active nap based on date
             
             if (currentTab === 'history') {
                 loadHistoryEntries();
