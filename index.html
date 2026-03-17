@@ -1,12 +1,10 @@
 <!-- 
-    STEP 67: Consistent Modal Approach for Everything
-    - Removed standalone wake-ups section (now only in sleep modal)
-    - Removed manual nap entry form
-    - Naps now work like overnight sleep: saved naps shown, "Add Nap" button opens modal
-    - Created separate "Add Nap" modal (vs. Edit Nap modal)
-    - Bath and Transferred now side-by-side in sleep modal (saves space!)
-    - Clean, consistent UX: everything uses modals for adding/editing
-    - Main screen only shows saved data + add buttons
+    STEP 69: Fix JavaScript Initialization Bug
+    - Fixed CRITICAL BUG: removed event listeners for deleted elements
+    - save-nap-btn, save-wakeup-btn, wakeup-start, wakeup-end no longer exist
+    - Added null checks for all form field event listeners
+    - Added renderSavedOvernightSleep() call when overnight data changes
+    - App should now load and display saved data properly!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1444,10 +1442,22 @@
             <div style="display: none;">
                 <input type="datetime-local" id="bedtime">
                 <input type="datetime-local" id="wake-time">
-                <input type="radio" name="bath" value="yes">
-                <input type="radio" name="bath" value="no">
-                <input type="radio" name="transferred" value="awake">
-                <input type="radio" name="transferred" value="asleep">
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="bath" value="yes">
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="bath" value="no">
+                    </label>
+                </div>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="transferred" value="awake">
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="transferred" value="asleep">
+                    </label>
+                </div>
                 <input type="text" id="came-to-bed">
             </div>
 
@@ -2899,31 +2909,40 @@
         function initializeTrackerTab() {
             document.getElementById('prev-date').addEventListener('click', () => changeDate(-1));
             document.getElementById('next-date').addEventListener('click', () => changeDate(1));
-            document.getElementById('save-nap-btn').addEventListener('click', saveNap);
             document.getElementById('start-nap-btn').addEventListener('click', startActiveNap);
-            document.getElementById('save-wakeup-btn').addEventListener('click', saveWakeup);
             
-            ['bedtime', 'wake-time', 'came-to-bed', 'bedtime-routine', 'notes'].forEach(id => {
-                document.getElementById(id).addEventListener('input', () => {
+            // Hidden form fields that still exist
+            ['bedtime', 'wake-time', 'came-to-bed'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => {
+                        saveDailySleepData();
+                        updateSummary();
+                        updateNextSleepWindow();
+                        renderSavedOvernightSleep();
+                    });
+                }
+            });
+            
+            // Notes fields
+            ['bedtime-routine', 'notes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => {
+                        saveDailySleepData();
+                    });
+                }
+            });
+            
+            // Tonight's actual bedtime
+            const tonightBedtime = document.getElementById('tonight-bedtime');
+            if (tonightBedtime) {
+                tonightBedtime.addEventListener('input', () => {
                     saveDailySleepData();
                     updateSummary();
                     updateNextSleepWindow();
                 });
-            });
-            
-            // Tonight's actual bedtime is just for logging
-            document.getElementById('tonight-bedtime').addEventListener('input', () => {
-                saveDailySleepData();
-                updateSummary();
-                updateNextSleepWindow();
-            });
-            
-            setupWakeupInputs();
-        }
-        
-        function setupWakeupInputs() {
-            document.getElementById('wakeup-start').addEventListener('input', calculateWakeupDuration);
-            document.getElementById('wakeup-end').addEventListener('input', calculateWakeupDuration);
+            }
         }
         
         function calculateWakeupDuration() {
