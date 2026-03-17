@@ -1,8 +1,9 @@
 <!-- 
-    STEP 72: Fix Wake-up Delete & Update
-    - Delete wake-up button now works properly
-    - Sleep card updates immediately when you add/delete wake-ups
-    - Total sleep recalculates in real-time
+    STEP 73: Show Wake-ups in Overnight Sleep Card
+    - Wake-ups now shown at bottom of sleep card with border separator
+    - Shows count and total awake time: "🌃 2 wake-ups (1h 15m awake)"
+    - Only shows if there are wake-ups
+    - Makes it easy to see at a glance!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -3588,6 +3589,26 @@
             if (transferred === 'asleep') details.push('😴 Asleep');
             if (cameToBed) details.push(`🛏️ ${cameToBed}`);
 
+            // Prepare wake-ups display
+            let wakeupsDisplay = '';
+            if (savedWakeups && savedWakeups.length > 0) {
+                const wakeupCount = savedWakeups.length;
+                const totalWakeupMinutes = savedWakeups.reduce((total, w) => total + (w.durationMinutes || 0), 0);
+                const wakeupHours = Math.floor(totalWakeupMinutes / 60);
+                const wakeupMins = totalWakeupMinutes % 60;
+                let wakeupTime = '';
+                if (wakeupHours > 0) {
+                    wakeupTime = `${wakeupHours}h ${wakeupMins}m`;
+                } else {
+                    wakeupTime = `${wakeupMins}m`;
+                }
+                wakeupsDisplay = `
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(91, 33, 182, 0.2); font-size: 0.85em; opacity: 0.8;">
+                        🌃 ${wakeupCount} wake-up${wakeupCount > 1 ? 's' : ''} (${wakeupTime} awake)
+                    </div>
+                `;
+            }
+
             display.innerHTML = `
                 <div class="saved-item" style="
                     background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
@@ -3613,6 +3634,7 @@
                                     ${details.join(' • ')}
                                 </div>
                             ` : ''}
+                            ${wakeupsDisplay}
                         </div>
                         <div style="flex-shrink: 0;">
                             <button onclick="openOvernightSleepModal()" style="
@@ -3886,8 +3908,18 @@
         }
 
         function deleteModalWakeup(index) {
+            console.log('Delete clicked for wake-up index:', index);
+            console.log('Current savedWakeups:', savedWakeups);
+            
             if (confirm('Delete this wake-up?')) {
+                if (!savedWakeups || index < 0 || index >= savedWakeups.length) {
+                    console.error('Invalid index:', index);
+                    return;
+                }
+                
                 savedWakeups.splice(index, 1);
+                console.log('After delete:', savedWakeups);
+                
                 renderModalWakeups();
                 renderSavedWakeups();
                 renderSavedOvernightSleep(); // Update the sleep card to recalculate total
