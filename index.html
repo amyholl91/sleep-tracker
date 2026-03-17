@@ -1,9 +1,12 @@
 <!-- 
-    STEP 63: PNG Icon for iOS
-    - Switched from SVG to PNG icon (iOS doesn't support SVG for home screen)
-    - Now references app-icon.png file
-    - Use generate-icon.html to create the PNG, then upload to GitHub
-    - Should show moon + zzz icon on iPhone home screen!
+    STEP 67: Consistent Modal Approach for Everything
+    - Removed standalone wake-ups section (now only in sleep modal)
+    - Removed manual nap entry form
+    - Naps now work like overnight sleep: saved naps shown, "Add Nap" button opens modal
+    - Created separate "Add Nap" modal (vs. Edit Nap modal)
+    - Bath and Transferred now side-by-side in sleep modal (saves space!)
+    - Clean, consistent UX: everything uses modals for adding/editing
+    - Main screen only shows saved data + add buttons
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1029,6 +1032,88 @@
             margin-bottom: 15px;
         }
 
+        /* Edit Nap Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+
+        .modal-close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-body .form-group {
+            margin-bottom: 20px;
+        }
+
+        .modal-body .location-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             body {
@@ -1355,6 +1440,17 @@
         </div>
 
         <div class="content">
+            <!-- Hidden form fields for data storage -->
+            <div style="display: none;">
+                <input type="datetime-local" id="bedtime">
+                <input type="datetime-local" id="wake-time">
+                <input type="radio" name="bath" value="yes">
+                <input type="radio" name="bath" value="no">
+                <input type="radio" name="transferred" value="awake">
+                <input type="radio" name="transferred" value="asleep">
+                <input type="text" id="came-to-bed">
+            </div>
+
             <!-- Sleep Tracker Tab -->
             <div id="tracker-tab" class="tab-content active">
                 <div class="date-nav">
@@ -1374,70 +1470,13 @@
                         🌙 Last Night's Sleep
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>🌃 Bedtime</label>
-                            <input type="datetime-local" id="bedtime">
-                        </div>
-                        <div class="form-group">
-                            <label>☀️ Wake Time</label>
-                            <input type="datetime-local" id="wake-time">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>🚿 Bath Last Night?</label>
-                            <div class="radio-group">
-                                <label class="radio-option">
-                                    <input type="radio" name="bath" value="yes">
-                                    <span>Yes 🛁</span>
-                                </label>
-                                <label class="radio-option">
-                                    <input type="radio" name="bath" value="no">
-                                    <span>No</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>🛏️ Transferred</label>
-                            <div class="radio-group">
-                                <label class="radio-option">
-                                    <input type="radio" name="transferred" value="awake">
-                                    <span>Awake 👀</span>
-                                </label>
-                                <label class="radio-option">
-                                    <input type="radio" name="transferred" value="asleep">
-                                    <span>Asleep 😴</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🌃 Night Wake-ups</label>
-                        <div id="saved-wakeups-list"></div>
-                        
-                        <div id="manual-wakeup-entry" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>⏰ Wake-up Start</label>
-                                    <input type="time" id="wakeup-start">
-                                </div>
-                                <div class="form-group">
-                                    <label>⏰ Back to Sleep</label>
-                                    <input type="time" id="wakeup-end">
-                                </div>
-                            </div>
-                            <div id="wakeup-duration-display" style="text-align: center; margin: 10px 0; font-weight: 600; color: #667eea;"></div>
-                            <button class="secondary-btn" id="save-wakeup-btn" style="width: 100%; margin-top: 10px;">💾 Save Wake-up</button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🛏️ Came to Mom & Dad's Bed</label>
-                        <input type="text" id="came-to-bed" placeholder="e.g., 4:30am">
-                    </div>
+                    <!-- Saved Overnight Sleep Display -->
+                    <div id="saved-overnight-display"></div>
+                    
+                    <!-- Add/Edit Overnight Sleep Button (shown when no data) -->
+                    <button id="add-overnight-btn" class="primary-btn" onclick="openOvernightSleepModal()" style="width: 100%; display: none;">
+                        ➕ Add Last Night's Sleep
+                    </button>
                 </div>
 
                 <div class="card">
@@ -1448,47 +1487,10 @@
                     <div id="active-nap-display"></div>
                     <div id="saved-naps-list"></div>
 
-                    <div id="manual-nap-entry">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>⏰ Nap Start</label>
-                                <input type="time" id="nap-start">
-                            </div>
-                            <div class="form-group">
-                                <label>⏰ Nap End</label>
-                                <input type="time" id="nap-end">
-                            </div>
-                        </div>
-
-                        <div id="nap-duration-display"></div>
-
-                        <div class="form-group">
-                            <label>📍 Where did baby nap?</label>
-                            <div class="location-buttons">
-                                <button class="location-btn" data-location="crib">🛏️ Crib</button>
-                                <button class="location-btn" data-location="stroller">🚼 Stroller</button>
-                                <button class="location-btn" data-location="car">🚗 Car</button>
-                                <button class="location-btn" data-location="carrier">👶 Carrier</button>
-                                <button class="location-btn" data-location="contact">🤱 Contact</button>
-                                <button class="location-btn" data-location="other">📍 Other</button>
-                            </div>
-                        </div>
-
-                        <div class="checkbox-group">
-                            <label class="checkbox-option">
-                                <input type="checkbox" id="short-nap-checkbox">
-                                <span>⚠️ Short nap (under 45 min - not restorative)</span>
-                            </label>
-                        </div>
-
-                        <div class="form-group" style="margin-top: 15px;">
-                            <label>💭 Nap Notes</label>
-                            <textarea id="nap-notes" placeholder="Any notes about this nap? (e.g., Woke crying, slept through loud noise, etc.)" style="min-height: 60px;"></textarea>
-                        </div>
-
-                        <button class="secondary-btn" id="save-nap-btn" style="width: 100%; margin-top: 15px;">💾 Save Nap</button>
-                    </div>
-
+                    <button id="add-nap-btn" class="primary-btn" onclick="openAddNapModal()" style="width: 100%; margin-top: 15px;">
+                        ➕ Add Nap
+                    </button>
+                    
                     <div style="text-align: center; margin-top: 15px;">
                         <button class="start-nap-btn" id="start-nap-btn">▶️ Start Nap Now</button>
                     </div>
@@ -2026,6 +2028,7 @@
                 setDefaultDatetimes();
             }
             
+            renderSavedOvernightSleep();
             renderSavedNaps();
             renderSavedWakeups();
             updateSummary();
@@ -3202,34 +3205,328 @@
             });
         }
 
+        // Add Nap Modal Functions
+        let addSelectedLocation = null;
+
+        function openAddNapModal() {
+            // Clear form
+            document.getElementById('add-nap-start').value = '';
+            document.getElementById('add-nap-end').value = '';
+            document.getElementById('add-nap-notes').value = '';
+            document.getElementById('add-short-nap').checked = false;
+            document.getElementById('add-short-nap-label').classList.remove('checked');
+            
+            // Clear location selection
+            const addLocationButtons = document.querySelectorAll('#add-location-buttons .location-btn');
+            addLocationButtons.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.onclick = function() {
+                    addLocationButtons.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    addSelectedLocation = this.getAttribute('data-location');
+                };
+            });
+            addSelectedLocation = null;
+            
+            // Add checkbox handler
+            const checkbox = document.getElementById('add-short-nap');
+            const label = document.getElementById('add-short-nap-label');
+            checkbox.onchange = function() {
+                if (this.checked) {
+                    label.classList.add('checked');
+                } else {
+                    label.classList.remove('checked');
+                }
+                calculateAddNapDuration();
+            };
+            
+            // Add time input handlers
+            document.getElementById('add-nap-start').oninput = calculateAddNapDuration;
+            document.getElementById('add-nap-end').oninput = calculateAddNapDuration;
+            
+            calculateAddNapDuration();
+            document.getElementById('add-nap-modal').style.display = 'flex';
+        }
+
+        function calculateAddNapDuration() {
+            const start = document.getElementById('add-nap-start').value;
+            const end = document.getElementById('add-nap-end').value;
+            const display = document.getElementById('add-nap-duration');
+            const checkbox = document.getElementById('add-short-nap');
+
+            if (!start || !end) {
+                display.textContent = 'Enter start and end times';
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = new Date(`2000-01-01T${end}`);
+            let diff = endTime - startTime;
+
+            if (diff < 0) {
+                diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            let durationText = '';
+            if (hours > 0) {
+                durationText = `${hours}h ${minutes}m`;
+            } else {
+                durationText = `${minutes}m`;
+            }
+
+            display.textContent = `Duration: ${durationText}`;
+
+            if (totalMinutes < 20 && !checkbox.checked) {
+                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Under 20 min - consider marking as non-restorative</span>';
+            }
+        }
+
+        function closeAddNapModal(event) {
+            if (event && event.target.classList.contains('modal-overlay')) {
+                document.getElementById('add-nap-modal').style.display = 'none';
+            } else if (!event) {
+                document.getElementById('add-nap-modal').style.display = 'none';
+            }
+        }
+
+        function saveAddedNap() {
+            const start = document.getElementById('add-nap-start').value;
+            const end = document.getElementById('add-nap-end').value;
+            const notes = document.getElementById('add-nap-notes').value;
+            const shortNap = document.getElementById('add-short-nap').checked;
+
+            if (!start || !end) {
+                alert('⚠️ Please enter start and end times');
+                return;
+            }
+
+            if (!addSelectedLocation) {
+                alert('⚠️ Please select a location');
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = new Date(`2000-01-01T${end}`);
+            let diff = endTime - startTime;
+
+            if (diff < 0) {
+                diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            let durationText = '';
+            if (hours > 0) {
+                durationText = `${hours}h ${minutes}m`;
+            } else {
+                durationText = `${minutes}m`;
+            }
+
+            const nap = {
+                id: Date.now() + Math.random(),
+                start: start,
+                end: end,
+                duration: durationText,
+                durationMinutes: totalMinutes,
+                location: addSelectedLocation,
+                shortNap: shortNap,
+                notes: notes
+            };
+
+            savedNaps.push(nap);
+
+            // Sort naps by start time
+            savedNaps.sort((a, b) => {
+                const timeA = a.start.split(':').map(Number);
+                const timeB = b.start.split(':').map(Number);
+                const minutesA = timeA[0] * 60 + timeA[1];
+                const minutesB = timeB[0] * 60 + timeB[1];
+                return minutesA - minutesB;
+            });
+
+            renderSavedNaps();
+            updateSummary();
+            updateNextSleepWindow();
+            saveDailySleepData();
+            
+            closeAddNapModal();
+        }
+
         function editNap(napIndex) {
             if (napIndex < 0 || napIndex >= savedNaps.length) return;
             
             const nap = savedNaps[napIndex];
-            document.getElementById('nap-start').value = nap.start;
-            document.getElementById('nap-end').value = nap.end;
-            document.getElementById('nap-notes').value = nap.notes || '';
             
-            document.querySelectorAll('.location-btn').forEach(btn => {
+            // Populate modal fields
+            document.getElementById('edit-nap-start').value = nap.start;
+            document.getElementById('edit-nap-end').value = nap.end;
+            document.getElementById('edit-nap-notes').value = nap.notes || '';
+            
+            // Set up location buttons in modal
+            const editLocationButtons = document.querySelectorAll('#edit-location-buttons .location-btn');
+            editLocationButtons.forEach(btn => {
                 btn.classList.remove('selected');
                 if (btn.getAttribute('data-location') === nap.location) {
                     btn.classList.add('selected');
                 }
+                
+                // Add click handler
+                btn.onclick = function() {
+                    editLocationButtons.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    editSelectedLocation = this.getAttribute('data-location');
+                };
             });
-            selectedLocation = nap.location;
+            editSelectedLocation = nap.location;
             
-            const checkbox = document.getElementById('short-nap-checkbox');
+            // Set checkbox
+            const checkbox = document.getElementById('edit-short-nap');
             checkbox.checked = nap.shortNap || false;
+            const label = document.getElementById('edit-short-nap-label');
             if (checkbox.checked) {
-                checkbox.closest('.checkbox-option').classList.add('checked');
+                label.classList.add('checked');
             } else {
-                checkbox.closest('.checkbox-option').classList.remove('checked');
+                label.classList.remove('checked');
             }
             
-            editingNapIndex = napIndex;
-            calculateNapDuration();
+            // Add checkbox change handler
+            checkbox.onchange = function() {
+                if (this.checked) {
+                    label.classList.add('checked');
+                } else {
+                    label.classList.remove('checked');
+                }
+                calculateEditNapDuration();
+            };
             
-            window.scrollTo({ top: 400, behavior: 'smooth' });
+            // Add time input handlers
+            document.getElementById('edit-nap-start').oninput = calculateEditNapDuration;
+            document.getElementById('edit-nap-end').oninput = calculateEditNapDuration;
+            
+            editingNapIndex = napIndex;
+            calculateEditNapDuration();
+            
+            // Show modal
+            document.getElementById('edit-nap-modal').style.display = 'flex';
+        }
+
+        let editSelectedLocation = null;
+
+        function calculateEditNapDuration() {
+            const start = document.getElementById('edit-nap-start').value;
+            const end = document.getElementById('edit-nap-end').value;
+            const display = document.getElementById('edit-nap-duration');
+            const checkbox = document.getElementById('edit-short-nap');
+
+            if (!start || !end) {
+                display.textContent = 'Enter start and end times';
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = new Date(`2000-01-01T${end}`);
+            let diff = endTime - startTime;
+
+            if (diff < 0) {
+                diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            let durationText = '';
+            if (hours > 0) {
+                durationText = `${hours}h ${minutes}m`;
+            } else {
+                durationText = `${minutes}m`;
+            }
+
+            display.textContent = `Duration: ${durationText}`;
+
+            if (totalMinutes < 20 && !checkbox.checked) {
+                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Under 20 min - consider marking as non-restorative</span>';
+            }
+        }
+
+        function closeEditNapModal(event) {
+            if (event && event.target.classList.contains('modal-overlay')) {
+                document.getElementById('edit-nap-modal').style.display = 'none';
+                editingNapIndex = -1;
+            } else if (!event) {
+                document.getElementById('edit-nap-modal').style.display = 'none';
+                editingNapIndex = -1;
+            }
+        }
+
+        function saveEditedNap() {
+            const start = document.getElementById('edit-nap-start').value;
+            const end = document.getElementById('edit-nap-end').value;
+            const notes = document.getElementById('edit-nap-notes').value;
+            const shortNap = document.getElementById('edit-short-nap').checked;
+
+            if (!start || !end) {
+                alert('⚠️ Please enter start and end times');
+                return;
+            }
+
+            if (!editSelectedLocation) {
+                alert('⚠️ Please select a location');
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = new Date(`2000-01-01T${end}`);
+            let diff = endTime - startTime;
+
+            if (diff < 0) {
+                diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            let durationText = '';
+            if (hours > 0) {
+                durationText = `${hours}h ${minutes}m`;
+            } else {
+                durationText = `${minutes}m`;
+            }
+
+            // Update the nap
+            savedNaps[editingNapIndex] = {
+                id: savedNaps[editingNapIndex].id || Date.now() + Math.random(),
+                start: start,
+                end: end,
+                duration: durationText,
+                durationMinutes: totalMinutes,
+                location: editSelectedLocation,
+                shortNap: shortNap,
+                notes: notes
+            };
+
+            // Sort naps by start time
+            savedNaps.sort((a, b) => {
+                const timeA = a.start.split(':').map(Number);
+                const timeB = b.start.split(':').map(Number);
+                const minutesA = timeA[0] * 60 + timeA[1];
+                const minutesB = timeB[0] * 60 + timeB[1];
+                return minutesA - minutesB;
+            });
+
+            renderSavedNaps();
+            updateSummary();
+            updateNextSleepWindow();
+            saveDailySleepData();
+            
+            closeEditNapModal();
         }
 
         function deleteNap(napIndex) {
@@ -3249,6 +3546,346 @@
                 } else {
                     console.log('Invalid index:', napIndex, 'Array length:', savedNaps.length);
                 }
+            }
+        }
+
+        // Overnight Sleep Modal Functions
+        function renderSavedOvernightSleep() {
+            const bedtime = document.getElementById('bedtime').value;
+            const wakeTime = document.getElementById('wake-time').value;
+            const display = document.getElementById('saved-overnight-display');
+            const addBtn = document.getElementById('add-overnight-btn');
+
+            if (!bedtime || !wakeTime) {
+                display.innerHTML = '';
+                addBtn.style.display = 'block';
+                return;
+            }
+
+            addBtn.style.display = 'none';
+
+            const bedtimeDate = new Date(bedtime);
+            const wakeTimeDate = new Date(wakeTime);
+            const diff = wakeTimeDate - bedtimeDate;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            const bedtimeStr = bedtimeDate.toLocaleString('en-US', { 
+                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true 
+            });
+            const wakeTimeStr = wakeTimeDate.toLocaleString('en-US', { 
+                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true 
+            });
+
+            const bath = document.querySelector('input[name="bath"]:checked')?.value;
+            const transferred = document.querySelector('input[name="transferred"]:checked')?.value;
+            const cameToBed = document.getElementById('came-to-bed').value;
+
+            let details = [];
+            if (bath === 'yes') details.push('🛁 Bath');
+            if (transferred === 'awake') details.push('👀 Awake transfer');
+            if (transferred === 'asleep') details.push('😴 Asleep transfer');
+            if (cameToBed) details.push(`🛏️ To bed: ${cameToBed}`);
+
+            display.innerHTML = `
+                <div class="saved-item" style="
+                    background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
+                    color: #5b21b6;
+                    padding: 15px;
+                    border-radius: 12px;
+                    margin-bottom: 15px;
+                    border: 1px solid #c4b5fd;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.95em; font-weight: 500; margin-bottom: 6px;">
+                                🌙 ${bedtimeStr} → ☀️ ${wakeTimeStr}
+                            </div>
+                            <div style="font-size: 0.9em; opacity: 0.8;">
+                                ${hours}h ${minutes}m sleep
+                            </div>
+                            ${details.length > 0 ? `
+                                <div style="margin-top: 8px; font-size: 0.85em; opacity: 0.75;">
+                                    ${details.join(' • ')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="openOvernightSleepModal()" style="
+                                background: rgba(91, 33, 182, 0.1);
+                                border: 1px solid rgba(91, 33, 182, 0.2);
+                                color: #5b21b6;
+                                padding: 6px 12px;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 0.85em;
+                                font-weight: 500;
+                            ">✏️ Edit</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openOvernightSleepModal() {
+            const bedtime = document.getElementById('bedtime').value;
+            const wakeTime = document.getElementById('wake-time').value;
+            const bath = document.querySelector('input[name="bath"]:checked')?.value;
+            const transferred = document.querySelector('input[name="transferred"]:checked')?.value;
+            const cameToBed = document.getElementById('came-to-bed').value;
+
+            // Populate modal
+            document.getElementById('edit-bedtime').value = bedtime || '';
+            document.getElementById('edit-wake-time').value = wakeTime || '';
+            document.getElementById('edit-came-to-bed').value = cameToBed || '';
+
+            // Set radio buttons
+            document.querySelectorAll('input[name="edit-bath"]').forEach(radio => {
+                radio.checked = radio.value === bath;
+                if (radio.checked) {
+                    radio.closest('.radio-option').classList.add('selected');
+                } else {
+                    radio.closest('.radio-option').classList.remove('selected');
+                }
+            });
+
+            document.querySelectorAll('input[name="edit-transferred"]').forEach(radio => {
+                radio.checked = radio.value === transferred;
+                if (radio.checked) {
+                    radio.closest('.radio-option').classList.add('selected');
+                } else {
+                    radio.closest('.radio-option').classList.remove('selected');
+                }
+            });
+
+            // Add radio button click handlers
+            document.querySelectorAll('#edit-sleep-modal input[type="radio"]').forEach(radio => {
+                radio.onchange = function() {
+                    this.closest('.radio-group').querySelectorAll('.radio-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.closest('.radio-option').classList.add('selected');
+                    calculateEditSleepDuration();
+                };
+            });
+
+            // Add time input handlers
+            document.getElementById('edit-bedtime').oninput = calculateEditSleepDuration;
+            document.getElementById('edit-wake-time').oninput = calculateEditSleepDuration;
+            
+            // Add wakeup time input handlers
+            document.getElementById('modal-wakeup-start').oninput = calculateModalWakeupDuration;
+            document.getElementById('modal-wakeup-end').oninput = calculateModalWakeupDuration;
+
+            renderModalWakeups();
+            calculateEditSleepDuration();
+            document.getElementById('edit-sleep-modal').style.display = 'flex';
+        }
+
+        function calculateEditSleepDuration() {
+            const bedtime = document.getElementById('edit-bedtime').value;
+            const wakeTime = document.getElementById('edit-wake-time').value;
+            const display = document.getElementById('edit-sleep-duration');
+
+            if (!bedtime || !wakeTime) {
+                display.textContent = 'Enter bedtime and wake time';
+                return;
+            }
+
+            const bedtimeDate = new Date(bedtime);
+            const wakeTimeDate = new Date(wakeTime);
+            const diff = wakeTimeDate - bedtimeDate;
+
+            if (diff <= 0) {
+                display.textContent = 'Wake time must be after bedtime';
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            display.textContent = `Total Sleep: ${hours}h ${minutes}m`;
+        }
+
+        function closeEditSleepModal(event) {
+            if (event && event.target.classList.contains('modal-overlay')) {
+                document.getElementById('edit-sleep-modal').style.display = 'none';
+            } else if (!event) {
+                document.getElementById('edit-sleep-modal').style.display = 'none';
+            }
+        }
+
+        function saveEditedSleep() {
+            const bedtime = document.getElementById('edit-bedtime').value;
+            const wakeTime = document.getElementById('edit-wake-time').value;
+
+            if (!bedtime || !wakeTime) {
+                alert('⚠️ Please enter both bedtime and wake time');
+                return;
+            }
+
+            const bedtimeDate = new Date(bedtime);
+            const wakeTimeDate = new Date(wakeTime);
+
+            if (wakeTimeDate <= bedtimeDate) {
+                alert('⚠️ Wake time must be after bedtime');
+                return;
+            }
+
+            // Save to hidden form fields
+            document.getElementById('bedtime').value = bedtime;
+            document.getElementById('wake-time').value = wakeTime;
+            
+            const bath = document.querySelector('input[name="edit-bath"]:checked')?.value;
+            const transferred = document.querySelector('input[name="edit-transferred"]:checked')?.value;
+            
+            if (bath) {
+                const bathRadio = document.querySelector(`input[name="bath"][value="${bath}"]`);
+                if (bathRadio) {
+                    bathRadio.checked = true;
+                    bathRadio.closest('.radio-option').classList.add('selected');
+                }
+            }
+            
+            if (transferred) {
+                const transferredRadio = document.querySelector(`input[name="transferred"][value="${transferred}"]`);
+                if (transferredRadio) {
+                    transferredRadio.checked = true;
+                    transferredRadio.closest('.radio-option').classList.add('selected');
+                }
+            }
+            
+            document.getElementById('came-to-bed').value = document.getElementById('edit-came-to-bed').value;
+
+            renderSavedOvernightSleep();
+            updateSummary();
+            updateNextSleepWindow();
+            saveDailySleepData();
+            
+            closeEditSleepModal();
+        }
+
+        // Modal Wakeup Functions
+        function renderModalWakeups() {
+            const display = document.getElementById('modal-saved-wakeups-list');
+            
+            if (!savedWakeups || savedWakeups.length === 0) {
+                display.innerHTML = '<div style="color: #999; font-size: 0.9em; padding: 10px 0;">No wake-ups logged</div>';
+                return;
+            }
+
+            display.innerHTML = savedWakeups.map((wakeup, index) => `
+                <div style="
+                    background: #fff3cd;
+                    padding: 12px;
+                    border-radius: 8px;
+                    margin-bottom: 8px;
+                    border: 1px solid #ffc107;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <div>
+                        <div style="font-weight: 500; font-size: 0.95em;">
+                            ⏰ ${wakeup.start} - ${wakeup.end || 'Still awake'}
+                        </div>
+                        <div style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">
+                            ${wakeup.durationMinutes}m awake
+                        </div>
+                    </div>
+                    <button onclick="deleteModalWakeup(${index})" style="
+                        background: rgba(220, 38, 38, 0.1);
+                        border: 1px solid rgba(220, 38, 38, 0.3);
+                        color: #dc2626;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 0.85em;
+                    ">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function showAddWakeupForm() {
+            document.getElementById('modal-wakeup-entry').style.display = 'block';
+            document.getElementById('show-wakeup-btn').style.display = 'none';
+            document.getElementById('modal-wakeup-start').value = '';
+            document.getElementById('modal-wakeup-end').value = '';
+            document.getElementById('modal-wakeup-duration-display').textContent = '';
+        }
+
+        function cancelAddWakeup() {
+            document.getElementById('modal-wakeup-entry').style.display = 'none';
+            document.getElementById('show-wakeup-btn').style.display = 'block';
+        }
+
+        function calculateModalWakeupDuration() {
+            const start = document.getElementById('modal-wakeup-start').value;
+            const end = document.getElementById('modal-wakeup-end').value;
+            const display = document.getElementById('modal-wakeup-duration-display');
+
+            if (!start || !end) {
+                display.textContent = '';
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = new Date(`2000-01-01T${end}`);
+            let diff = endTime - startTime;
+
+            if (diff < 0) {
+                diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            display.textContent = `Duration: ${totalMinutes}m`;
+        }
+
+        function saveModalWakeup() {
+            const start = document.getElementById('modal-wakeup-start').value;
+            const end = document.getElementById('modal-wakeup-end').value;
+
+            if (!start) {
+                alert('⚠️ Please enter wake-up start time');
+                return;
+            }
+
+            const startTime = new Date(`2000-01-01T${start}`);
+            const endTime = end ? new Date(`2000-01-01T${end}`) : null;
+            
+            let diff = 0;
+            if (endTime) {
+                diff = endTime - startTime;
+                if (diff < 0) {
+                    diff += 24 * 60 * 60 * 1000;
+                }
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+
+            const wakeup = {
+                start: start,
+                end: end || '',
+                durationMinutes: totalMinutes
+            };
+
+            if (!savedWakeups) {
+                savedWakeups = [];
+            }
+            savedWakeups.push(wakeup);
+
+            renderModalWakeups();
+            renderSavedWakeups();
+            cancelAddWakeup();
+            saveDailySleepData();
+        }
+
+        function deleteModalWakeup(index) {
+            if (confirm('Delete this wake-up?')) {
+                savedWakeups.splice(index, 1);
+                renderModalWakeups();
+                renderSavedWakeups();
+                saveDailySleepData();
             }
         }
 
@@ -4724,5 +5361,230 @@
             }
         }
     </script>
+
+    <!-- Add Nap Modal -->
+    <div id="add-nap-modal" class="modal-overlay" style="display: none;" onclick="closeAddNapModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>➕ Add Nap</h3>
+                <button class="modal-close-btn" onclick="closeAddNapModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" id="add-nap-start">
+                </div>
+                
+                <div class="form-group">
+                    <label>End Time</label>
+                    <input type="time" id="add-nap-end">
+                </div>
+                
+                <div class="form-group">
+                    <label>Location</label>
+                    <div class="location-buttons" id="add-location-buttons">
+                        <button class="location-btn" data-location="crib">🛏️ Crib</button>
+                        <button class="location-btn" data-location="stroller">🚼 Stroller</button>
+                        <button class="location-btn" data-location="car">🚗 Car</button>
+                        <button class="location-btn" data-location="carrier">👶 Carrier</button>
+                        <button class="location-btn" data-location="contact">🤱 Contact</button>
+                        <button class="location-btn" data-location="other">📍 Other</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-option" id="add-short-nap-label">
+                        <input type="checkbox" id="add-short-nap">
+                        <span>⚠️ Non-restorative nap (under 20 min)</span>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="add-nap-notes" placeholder="Any notes about this nap...">
+                </div>
+                
+                <div id="add-nap-duration" style="
+                    margin-top: 15px;
+                    padding: 15px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-radius: 12px;
+                    text-align: center;
+                    font-size: 1.1em;
+                    font-weight: 600;
+                "></div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeAddNapModal()" style="flex: 1;">Cancel</button>
+                <button class="primary-btn" onclick="saveAddedNap()" style="flex: 1;">Save Nap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Nap Modal -->
+    <div id="edit-nap-modal" class="modal-overlay" style="display: none;" onclick="closeEditNapModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>✏️ Edit Nap</h3>
+                <button class="modal-close-btn" onclick="closeEditNapModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" id="edit-nap-start">
+                </div>
+                
+                <div class="form-group">
+                    <label>End Time</label>
+                    <input type="time" id="edit-nap-end">
+                </div>
+                
+                <div class="form-group">
+                    <label>Location</label>
+                    <div class="location-buttons" id="edit-location-buttons">
+                        <button class="location-btn" data-location="crib">🛏️ Crib</button>
+                        <button class="location-btn" data-location="stroller">🚼 Stroller</button>
+                        <button class="location-btn" data-location="car">🚗 Car</button>
+                        <button class="location-btn" data-location="carrier">👶 Carrier</button>
+                        <button class="location-btn" data-location="contact">🤱 Contact</button>
+                        <button class="location-btn" data-location="other">📍 Other</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-option" id="edit-short-nap-label">
+                        <input type="checkbox" id="edit-short-nap">
+                        <span>⚠️ Non-restorative nap (under 20 min)</span>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="edit-nap-notes" placeholder="Any notes about this nap...">
+                </div>
+                
+                <div id="edit-nap-duration" style="
+                    margin-top: 15px;
+                    padding: 15px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-radius: 12px;
+                    text-align: center;
+                    font-size: 1.1em;
+                    font-weight: 600;
+                "></div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeEditNapModal()" style="flex: 1;">Cancel</button>
+                <button class="primary-btn" onclick="saveEditedNap()" style="flex: 1;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Overnight Sleep Modal -->
+    <div id="edit-sleep-modal" class="modal-overlay" style="display: none;" onclick="closeEditSleepModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>✏️ Edit Last Night's Sleep</h3>
+                <button class="modal-close-btn" onclick="closeEditSleepModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>🌃 Bedtime</label>
+                    <input type="datetime-local" id="edit-bedtime">
+                </div>
+                
+                <div class="form-group">
+                    <label>☀️ Wake Time</label>
+                    <input type="datetime-local" id="edit-wake-time">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>🚿 Bath?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="edit-bath" value="yes">
+                                <span>Yes 🛁</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="edit-bath" value="no">
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🛏️ Transferred</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="edit-transferred" value="awake">
+                                <span>Awake 👀</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="edit-transferred" value="asleep">
+                                <span>Asleep 😴</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>🛏️ Came to Mom & Dad's Bed</label>
+                    <input type="text" id="edit-came-to-bed" placeholder="e.g., 4:30am">
+                </div>
+                
+                <!-- Wake-ups Section in Modal -->
+                <div class="form-group" style="border-top: 2px solid #e0e0e0; padding-top: 20px; margin-top: 20px;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">🌃 Night Wake-ups</label>
+                    <div id="modal-saved-wakeups-list"></div>
+                    
+                    <button class="secondary-btn" onclick="showAddWakeupForm()" id="show-wakeup-btn" style="width: 100%; margin-top: 10px;">
+                        ➕ Add Wake-up
+                    </button>
+                    
+                    <div id="modal-wakeup-entry" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>⏰ Wake-up Start</label>
+                                <input type="time" id="modal-wakeup-start">
+                            </div>
+                            <div class="form-group">
+                                <label>⏰ Back to Sleep</label>
+                                <input type="time" id="modal-wakeup-end">
+                            </div>
+                        </div>
+                        <div id="modal-wakeup-duration-display" style="text-align: center; margin: 10px 0; font-weight: 600; color: #667eea;"></div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="secondary-btn" onclick="cancelAddWakeup()" style="flex: 1;">Cancel</button>
+                            <button class="primary-btn" onclick="saveModalWakeup()" style="flex: 1;">💾 Save Wake-up</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="edit-sleep-duration" style="
+                    margin-top: 15px;
+                    padding: 15px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-radius: 12px;
+                    text-align: center;
+                    font-size: 1.1em;
+                    font-weight: 600;
+                "></div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeEditSleepModal()" style="flex: 1;">Cancel</button>
+                <button class="primary-btn" onclick="saveEditedSleep()" style="flex: 1;">Save Changes</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
