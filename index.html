@@ -1,9 +1,13 @@
 <!-- 
-    STEP 75: Start Nap Without Location
-    - "Start Nap Now" button works immediately - no location required!
-    - When you end the nap, a modal pops up to collect location and notes
-    - Shows nap duration, start/end times in the modal
-    - Much better flow - just tap Start and go!
+    STEP 78: Refined Nap Ranges Based on Sleep Cycles
+    - Updated wake window ranges to match sleep science:
+      * <45 min = incomplete cycle, skip for wake window (±45 min range if used)
+      * 45-60 min = 1 sleep cycle (±30 min range)
+      * 60-90 min = good nap approaching 2 cycles (±15 min range)
+      * 90+ min = excellent 2+ cycles (single precise time)
+    - Nap alert now shows for ALL naps that interfere with bedtime (removed duration check)
+    - Math backed by infant sleep science: 1 cycle ≈ 45 min, 2 cycles ≈ 90 min
+    - All ranges preserved for non-restorative naps ✅
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1500,9 +1504,9 @@
                         ➕ Add Nap
                     </button>
                     
-                    <div style="text-align: center; margin-top: 15px;">
-                        <button class="start-nap-btn" id="start-nap-btn">▶️ Start Nap Now</button>
-                    </div>
+                    <button class="primary-btn" id="start-nap-btn" style="width: 100%; margin-top: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        ▶️ Start Nap Now
+                    </button>
                 </div>
 
                 <div class="card">
@@ -2247,7 +2251,7 @@
                 return;
             }
 
-            const isShortNap = data.durationMinutes < 20;
+            const isShortNap = data.durationMinutes < 45;
 
             const nap = {
                 id: Date.now() + Math.random(),
@@ -2381,29 +2385,35 @@
                 const lastNap = savedNaps[savedNaps.length - 1];
                 const napDuration = lastNap.durationMinutes;
                 
-                // Under 20 minutes: non-restorative, skip this nap entirely
-                if (napDuration < 20) {
-                    // Find the last restorative nap (20+ minutes)
-                    const restorativeNaps = savedNaps.filter(nap => nap.durationMinutes >= 20);
+                // Under 45 minutes: non-restorative (incomplete sleep cycle), skip this nap entirely
+                if (napDuration < 45) {
+                    // Find the last restorative nap (45+ minutes)
+                    const restorativeNaps = savedNaps.filter(nap => nap.durationMinutes >= 45);
                     if (restorativeNaps.length > 0) {
                         lastNapForWindow = restorativeNaps[restorativeNaps.length - 1];
                     }
                     // Show wide time range for very short nap
                     showTimeRange = true;
                     rangeMinutes = 45; // ±45 min range
-                    adjustmentLabel = '⚠️ Short nap - watch for sleepy cues';
+                    adjustmentLabel = '⚠️ Short nap (incomplete sleep cycle) - watch for sleepy cues';
                 }
-                // 20-60 minutes: short to medium nap, use moderate range
-                else if (napDuration >= 20 && napDuration < 60) {
+                // 45-60 minutes: one sleep cycle, moderate range
+                else if (napDuration >= 45 && napDuration < 60) {
                     lastNapForWindow = lastNap;
                     showTimeRange = true;
                     rangeMinutes = 30; // ±30 min range
-                    adjustmentLabel = '⚠️ Medium nap - timing may vary';
+                    adjustmentLabel = '⚠️ Short nap (1 sleep cycle) - timing may vary';
                 }
-                // 60+ minutes: good restorative nap, tight range or single time
+                // 60-90 minutes: good nap, tighter range
+                else if (napDuration >= 60 && napDuration < 90) {
+                    lastNapForWindow = lastNap;
+                    showTimeRange = true;
+                    rangeMinutes = 15; // ±15 min range
+                }
+                // 90+ minutes: excellent restorative nap (2+ sleep cycles), single time
                 else {
                     lastNapForWindow = lastNap;
-                    showTimeRange = false; // Single time for good naps
+                    showTimeRange = false; // Single time for long naps
                 }
             }
             
@@ -2780,8 +2790,8 @@
                         </div>
                     </div>
                 `;
-            } else if (minutesUntilIdealEnd <= 60 && napMinutes >= 20) {
-                // Show countdown when within 60 min of ideal end (and nap is at least 20 min)
+            } else if (minutesUntilIdealEnd <= 60) {
+                // Show countdown when within 60 min of ideal end (regardless of nap duration)
                 const napEndTimeStr = idealNapEndTime.toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
@@ -3134,8 +3144,8 @@
                 durationText = `${minutes}m`;
             }
 
-            // Automatically mark naps under 20 minutes as non-restorative
-            const isShortNap = totalMinutes < 20 || document.getElementById('short-nap-checkbox').checked;
+            // Automatically mark naps under 45 minutes as non-restorative (incomplete sleep cycle)
+            const isShortNap = totalMinutes < 45 || document.getElementById('short-nap-checkbox').checked;
             const napNotes = document.getElementById('nap-notes').value;
 
             const nap = {
@@ -3315,8 +3325,17 @@
 
             display.textContent = `Duration: ${durationText}`;
 
-            if (totalMinutes < 20 && !checkbox.checked) {
-                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Under 20 min - consider marking as non-restorative</span>';
+            // Auto-check non-restorative for naps under 45 minutes (incomplete sleep cycle)
+            if (totalMinutes < 45) {
+                checkbox.checked = true;
+                const label = document.getElementById('add-short-nap-label');
+                label.classList.add('checked');
+                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
+            } else {
+                // Uncheck if duration increases above 45 min
+                checkbox.checked = false;
+                const label = document.getElementById('add-short-nap-label');
+                label.classList.remove('checked');
             }
         }
 
@@ -3485,8 +3504,17 @@
 
             display.textContent = `Duration: ${durationText}`;
 
-            if (totalMinutes < 20 && !checkbox.checked) {
-                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Under 20 min - consider marking as non-restorative</span>';
+            // Auto-check non-restorative for naps under 45 minutes (incomplete sleep cycle)
+            if (totalMinutes < 45) {
+                checkbox.checked = true;
+                const label = document.getElementById('edit-short-nap-label');
+                label.classList.add('checked');
+                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
+            } else {
+                // Uncheck if duration increases above 45 min
+                checkbox.checked = false;
+                const label = document.getElementById('edit-short-nap-label');
+                label.classList.remove('checked');
             }
         }
 
@@ -4431,8 +4459,8 @@
                     const data = JSON.parse(stored);
                     if (data.naps) {
                         data.naps.forEach(nap => {
-                            // Only count restorative naps (20+ minutes)
-                            if (nap.durationMinutes >= 20) {
+                            // Only count restorative naps (45+ minutes)
+                            if (nap.durationMinutes >= 45) {
                                 totalMinutes += nap.durationMinutes;
                                 napCount++;
                             }
@@ -5479,7 +5507,7 @@
                 <div class="form-group">
                     <label class="checkbox-option" id="add-short-nap-label">
                         <input type="checkbox" id="add-short-nap">
-                        <span>⚠️ Non-restorative nap (under 20 min)</span>
+                        <span>⚠️ Non-restorative nap (under 45 min)</span>
                     </label>
                 </div>
                 
@@ -5541,7 +5569,7 @@
                 <div class="form-group">
                     <label class="checkbox-option" id="edit-short-nap-label">
                         <input type="checkbox" id="edit-short-nap">
-                        <span>⚠️ Non-restorative nap (under 20 min)</span>
+                        <span>⚠️ Non-restorative nap (under 45 min)</span>
                     </label>
                 </div>
                 
