@@ -1,9 +1,9 @@
 <!-- 
-    STEP 73: Show Wake-ups in Overnight Sleep Card
-    - Wake-ups now shown at bottom of sleep card with border separator
-    - Shows count and total awake time: "🌃 2 wake-ups (1h 15m awake)"
-    - Only shows if there are wake-ups
-    - Makes it easy to see at a glance!
+    STEP 75: Start Nap Without Location
+    - "Start Nap Now" button works immediately - no location required!
+    - When you end the nap, a modal pops up to collect location and notes
+    - Shows nap duration, start/end times in the modal
+    - Much better flow - just tap Start and go!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2173,14 +2173,10 @@
         }
 
         function startActiveNap() {
-            if (!selectedLocation) {
-                alert('⚠️ Please select where baby is napping first!');
-                return;
-            }
-
+            // Start nap immediately - location can be added when ending
             activeNap = {
                 startTime: new Date(),
-                location: selectedLocation
+                location: '' // Will be set when ending the nap
             };
 
             document.getElementById('manual-nap-entry').style.display = 'none';
@@ -2213,22 +2209,63 @@
                 durationText = `${minutes}m`;
             }
 
-            const isShortNap = totalMinutes < 20;
+            // Store the nap data temporarily
+            window.pendingActiveNap = {
+                startTime: start,
+                endTime: endTime,
+                durationMinutes: totalMinutes,
+                durationText: durationText
+            };
+
+            // Open modal to collect location and notes
+            openEndNapModal();
+        }
+
+        function openEndNapModal() {
+            const modal = document.getElementById('end-nap-modal');
+            const data = window.pendingActiveNap;
+            
+            // Pre-fill times
+            document.getElementById('end-nap-start').value = data.startTime.toTimeString().slice(0, 5);
+            document.getElementById('end-nap-end').value = data.endTime.toTimeString().slice(0, 5);
+            document.getElementById('end-nap-duration').textContent = data.durationText;
+            
+            // Reset location and notes
+            document.querySelectorAll('input[name="end-nap-location"]').forEach(radio => radio.checked = false);
+            document.getElementById('end-nap-notes').value = '';
+            
+            modal.style.display = 'flex';
+        }
+
+        function saveEndedNap() {
+            const data = window.pendingActiveNap;
+            const location = document.querySelector('input[name="end-nap-location"]:checked')?.value;
+            const notes = document.getElementById('end-nap-notes').value.trim();
+
+            if (!location) {
+                alert('⚠️ Please select where baby napped');
+                return;
+            }
+
+            const isShortNap = data.durationMinutes < 20;
 
             const nap = {
-                id: Date.now() + Math.random(), // Unique ID
-                start: start.toTimeString().slice(0, 5),
-                end: endTime.toTimeString().slice(0, 5),
-                duration: durationText,
-                durationMinutes: totalMinutes,
-                location: activeNap.location,
-                shortNap: isShortNap
+                id: Date.now() + Math.random(),
+                start: data.startTime.toTimeString().slice(0, 5),
+                end: data.endTime.toTimeString().slice(0, 5),
+                duration: data.durationText,
+                durationMinutes: data.durationMinutes,
+                location: location,
+                shortNap: isShortNap,
+                notes: notes
             };
 
             savedNaps.push(nap);
             
+            // Clean up
             activeNap = null;
             clearInterval(activeNapInterval);
+            window.pendingActiveNap = null;
             
             document.getElementById('manual-nap-entry').style.display = 'block';
             document.getElementById('start-nap-btn').style.display = 'block';
@@ -2240,6 +2277,14 @@
             updateSummary();
             updateNextSleepWindow();
             saveDailySleepData();
+            
+            closeEndNapModal();
+        }
+
+        function closeEndNapModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('end-nap-modal').style.display = 'none';
+            window.pendingActiveNap = null;
         }
 
         function updateNextSleepWindow() {
@@ -5520,6 +5565,74 @@
             <div class="modal-footer">
                 <button class="secondary-btn" onclick="closeEditNapModal()" style="flex: 1;">Cancel</button>
                 <button class="primary-btn" onclick="saveEditedNap()" style="flex: 1;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Active Nap Modal -->
+    <div id="end-nap-modal" class="modal-overlay" style="display: none;" onclick="closeEndNapModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>⏹️ End Nap</h3>
+                <button class="modal-close-btn" onclick="closeEndNapModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 15px;
+                    border-radius: 12px;
+                    text-align: center;
+                    margin-bottom: 20px;
+                ">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 8px;">
+                        <span id="end-nap-start"></span> - <span id="end-nap-end"></span>
+                    </div>
+                    <div style="font-size: 1.3em; font-weight: 600;">
+                        Duration: <span id="end-nap-duration"></span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>📍 Where did baby nap?</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="crib">
+                            🛏️ Crib
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="stroller">
+                            🚼 Stroller
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="car">
+                            🚗 Car
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="carrier">
+                            👶 Carrier
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="contact">
+                            🤱 Contact
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="end-nap-location" value="other">
+                            📍 Other
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="end-nap-notes" placeholder="Any notes about this nap...">
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="secondary-btn" onclick="closeEndNapModal()" style="flex: 1;">Cancel</button>
+                <button class="primary-btn" onclick="saveEndedNap()" style="flex: 1;">Save Nap</button>
             </div>
         </div>
     </div>
