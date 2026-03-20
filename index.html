@@ -1,13 +1,17 @@
 <!-- 
-    STEP 78: Refined Nap Ranges Based on Sleep Cycles
-    - Updated wake window ranges to match sleep science:
-      * <45 min = incomplete cycle, skip for wake window (±45 min range if used)
-      * 45-60 min = 1 sleep cycle (±30 min range)
-      * 60-90 min = good nap approaching 2 cycles (±15 min range)
-      * 90+ min = excellent 2+ cycles (single precise time)
-    - Nap alert now shows for ALL naps that interfere with bedtime (removed duration check)
-    - Math backed by infant sleep science: 1 cycle ≈ 45 min, 2 cycles ≈ 90 min
-    - All ranges preserved for non-restorative naps ✅
+    STEP 87: Simplified Realistic Wake Window Ranges (Ages 0-18 months)
+    - <20 min = IGNORED (micro-nap, fall back to last decent nap)
+    - 20-44 min = ±45 min range (non-restorative, uncertain timing)
+    - 45-60 min = ±15 min range (good restorative, 1 sleep cycle)
+    - 60+ min = PRECISE TIME (excellent restorative, 1.5-2+ cycles)
+    
+    Why this is better:
+    - More realistic! Most good naps are 60-90 min, they should get precise windows
+    - 90+ was too high a bar - very few naps hit that
+    - Matches sleep science for ages 0-18 months (cycles are 45-60 min)
+    
+    TODO for Future Amy: When Grayson hits ~18 months, revisit thresholds!
+    Sleep cycles will approach 90 min, may need to adjust ranges then.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -785,6 +789,7 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-weight: 400;
         }
 
         .checkbox-option:hover {
@@ -2155,11 +2160,20 @@
                         Duration: ${hours > 0 ? hours + 'h ' : ''}${minutes}m
                     </div>
                     
-                    <div style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
-                        ${locationEmoji[activeNap.location]} ${activeNap.location}
-                    </div>
+                    ${activeNap.location ? `
+                        <div style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
+                            ${locationEmoji[activeNap.location]} ${activeNap.location}
+                        </div>
+                    ` : ''}
                     
-                    <button class="end-nap-btn" onclick="endActiveNap()">⏹️ End Nap</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="secondary-btn" onclick="cancelActiveNap(event)" style="flex: 1; background: #ef4444; color: white;">
+                            ❌ Cancel
+                        </button>
+                        <button class="end-nap-btn" onclick="endActiveNap(event)" style="flex: 1;">
+                            ⏹️ End Nap
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -2176,14 +2190,65 @@
             updateNextSleepWindow();
         }
 
+        function cancelActiveNap(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            console.log('=== CANCEL ACTIVE NAP CLICKED ===');
+            console.log('Opening cancel confirmation modal...');
+            
+            // Open confirmation modal instead of using confirm()
+            document.getElementById('cancel-nap-modal').style.display = 'flex';
+        }
+
+        function closeCancelNapModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            console.log('Cancel modal closed');
+            document.getElementById('cancel-nap-modal').style.display = 'none';
+        }
+
+        function confirmCancelNap() {
+            console.log('=== CONFIRMING CANCEL NAP ===');
+            console.log('activeNap exists:', !!activeNap);
+            
+            if (!activeNap) {
+                console.log('No active nap to cancel');
+                closeCancelNapModal();
+                return;
+            }
+            
+            console.log('Cancelling nap...');
+            activeNap = null;
+            clearInterval(activeNapInterval);
+            
+            const startBtn = document.getElementById('start-nap-btn');
+            console.log('Start button found:', !!startBtn);
+            if (startBtn) {
+                startBtn.style.display = 'block';
+                console.log('Start button shown');
+            }
+            
+            console.log('Updating displays...');
+            updateActiveNapDisplay();
+            updateNapAlert();
+            updateNextSleepWindow();
+            
+            closeCancelNapModal();
+            console.log('=== CANCEL COMPLETE ===');
+        }
+
         function startActiveNap() {
+            console.log('Start Nap clicked!');
+            
             // Start nap immediately - location can be added when ending
             activeNap = {
                 startTime: new Date(),
                 location: '' // Will be set when ending the nap
             };
 
-            document.getElementById('manual-nap-entry').style.display = 'none';
+            // Hide the start button
             document.getElementById('start-nap-btn').style.display = 'none';
             
             updateActiveNapDisplay();
@@ -2193,9 +2258,16 @@
                 updateNapAlert();
             }, 10000);
             updateNextSleepWindow();
+            
+            console.log('Active nap started:', activeNap);
         }
 
-        function endActiveNap() {
+        function endActiveNap(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
             if (!activeNap) return;
 
             const endTime = new Date();
@@ -2242,16 +2314,30 @@
         }
 
         function saveEndedNap() {
+            console.log('=== SAVE ENDED NAP CALLED ===');
+            console.log('pendingActiveNap:', window.pendingActiveNap);
+            
             const data = window.pendingActiveNap;
+            if (!data) {
+                console.error('No pending nap data!');
+                alert('Error: No nap data found');
+                return;
+            }
+            
             const location = document.querySelector('input[name="end-nap-location"]:checked')?.value;
             const notes = document.getElementById('end-nap-notes').value.trim();
 
+            console.log('Selected location:', location);
+            console.log('Notes:', notes);
+
             if (!location) {
+                console.log('No location selected - showing alert');
                 alert('⚠️ Please select where baby napped');
                 return;
             }
 
             const isShortNap = data.durationMinutes < 45;
+            console.log('Duration:', data.durationMinutes, 'Short nap:', isShortNap);
 
             const nap = {
                 id: Date.now() + Math.random(),
@@ -2264,16 +2350,24 @@
                 notes: notes
             };
 
+            console.log('Creating nap object:', nap);
             savedNaps.push(nap);
+            console.log('Nap added to savedNaps, total naps:', savedNaps.length);
             
             // Clean up
             activeNap = null;
             clearInterval(activeNapInterval);
             window.pendingActiveNap = null;
+            console.log('Cleaned up active nap and interval');
             
-            document.getElementById('manual-nap-entry').style.display = 'block';
-            document.getElementById('start-nap-btn').style.display = 'block';
+            // Show start button again
+            const startBtn = document.getElementById('start-nap-btn');
+            if (startBtn) {
+                startBtn.style.display = 'block';
+                console.log('Start button shown');
+            }
             
+            console.log('Updating displays...');
             renderSavedNaps();
             updateActiveNapDisplay();
             updateNapAlert();
@@ -2282,7 +2376,9 @@
             updateNextSleepWindow();
             saveDailySleepData();
             
+            console.log('Closing modal...');
             closeEndNapModal();
+            console.log('=== SAVE COMPLETE ===');
         }
 
         function closeEndNapModal(event) {
@@ -2385,35 +2481,56 @@
                 const lastNap = savedNaps[savedNaps.length - 1];
                 const napDuration = lastNap.durationMinutes;
                 
-                // Under 45 minutes: non-restorative (incomplete sleep cycle), skip this nap entirely
-                if (napDuration < 45) {
-                    // Find the last restorative nap (45+ minutes)
-                    const restorativeNaps = savedNaps.filter(nap => nap.durationMinutes >= 45);
-                    if (restorativeNaps.length > 0) {
-                        lastNapForWindow = restorativeNaps[restorativeNaps.length - 1];
+                // TIER 1: Under 20 minutes = MICRO-NAP - completely ignored, fall back to last decent nap
+                if (napDuration < 20) {
+                    // Find the last decent nap (20+ minutes)
+                    const decentNaps = savedNaps.filter(nap => nap.durationMinutes >= 20);
+                    if (decentNaps.length > 0) {
+                        // There IS a decent nap earlier - use that nap's settings
+                        const decentNap = decentNaps[decentNaps.length - 1];
+                        lastNapForWindow = decentNap;
+                        const decentDuration = decentNap.durationMinutes;
+                        
+                        // Apply range based on the decent nap's duration
+                        if (decentDuration >= 20 && decentDuration < 45) {
+                            // 20-44 min nap
+                            showTimeRange = true;
+                            rangeMinutes = 45; // ±45 min - uncertain timing
+                            adjustmentLabel = '⚠️ Short nap (incomplete sleep cycle) - watch for sleepy cues';
+                        } else if (decentDuration >= 45 && decentDuration < 60) {
+                            // 45-60 min nap - good restorative, 1 sleep cycle
+                            showTimeRange = true;
+                            rangeMinutes = 15; // ±15 min range
+                        } else {
+                            // 60+ minutes - excellent restorative, precise time
+                            showTimeRange = false; // Single precise time
+                        }
+                    } else {
+                        // NO decent naps all day (only micro-naps) - fall back to morning wake time
+                        // Don't set lastNapForWindow - will use morning wake time
+                        showTimeRange = true;
+                        rangeMinutes = 45;
+                        adjustmentLabel = '⚠️ Only micro-naps today - watch for sleepy cues';
                     }
-                    // Show wide time range for very short nap
-                    showTimeRange = true;
-                    rangeMinutes = 45; // ±45 min range
-                    adjustmentLabel = '⚠️ Short nap (incomplete sleep cycle) - watch for sleepy cues';
                 }
-                // 45-60 minutes: one sleep cycle, moderate range
-                else if (napDuration >= 45 && napDuration < 60) {
+                // TIER 2: 20-44 minutes = SHORT/NON-RESTORATIVE - show wide uncertain range
+                else if (napDuration >= 20 && napDuration < 45) {
                     lastNapForWindow = lastNap;
                     showTimeRange = true;
-                    rangeMinutes = 30; // ±30 min range
-                    adjustmentLabel = '⚠️ Short nap (1 sleep cycle) - timing may vary';
+                    rangeMinutes = 45; // ±45 min - uncertain timing
+                    adjustmentLabel = '⚠️ Short nap (incomplete sleep cycle) - watch for sleepy cues';
                 }
-                // 60-90 minutes: good nap, tighter range
-                else if (napDuration >= 60 && napDuration < 90) {
+                // TIER 3: 45+ minutes = RESTORATIVE
+                // 45-60 minutes: good restorative nap, 1 sleep cycle
+                else if (napDuration >= 45 && napDuration < 60) {
                     lastNapForWindow = lastNap;
                     showTimeRange = true;
                     rangeMinutes = 15; // ±15 min range
                 }
-                // 90+ minutes: excellent restorative nap (2+ sleep cycles), single time
+                // 60+ minutes: excellent restorative nap, precise wake window
                 else {
                     lastNapForWindow = lastNap;
-                    showTimeRange = false; // Single time for long naps
+                    showTimeRange = false; // Single precise time
                 }
             }
             
@@ -3323,14 +3440,14 @@
                 durationText = `${minutes}m`;
             }
 
-            display.textContent = `Duration: ${durationText}`;
+            display.innerHTML = `<span style="font-weight: 400;">Duration:</span> <span style="font-weight: 600;">${durationText}</span>`;
 
             // Auto-check non-restorative for naps under 45 minutes (incomplete sleep cycle)
             if (totalMinutes < 45) {
                 checkbox.checked = true;
                 const label = document.getElementById('add-short-nap-label');
                 label.classList.add('checked');
-                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
+                display.innerHTML += '<br><span style="font-size: 0.9em; font-weight: 400;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
             } else {
                 // Uncheck if duration increases above 45 min
                 checkbox.checked = false;
@@ -3502,14 +3619,14 @@
                 durationText = `${minutes}m`;
             }
 
-            display.textContent = `Duration: ${durationText}`;
+            display.innerHTML = `<span style="font-weight: 400;">Duration:</span> <span style="font-weight: 600;">${durationText}</span>`;
 
             // Auto-check non-restorative for naps under 45 minutes (incomplete sleep cycle)
             if (totalMinutes < 45) {
                 checkbox.checked = true;
                 const label = document.getElementById('edit-short-nap-label');
                 label.classList.add('checked');
-                display.innerHTML += '<br><span style="font-size: 0.9em;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
+                display.innerHTML += '<br><span style="font-size: 0.9em; font-weight: 400;">⚠️ Auto-marked as non-restorative (under 45 min - incomplete sleep cycle)</span>';
             } else {
                 // Uncheck if duration increases above 45 min
                 checkbox.checked = false;
@@ -5661,6 +5778,31 @@
             <div class="modal-footer">
                 <button class="secondary-btn" onclick="closeEndNapModal()" style="flex: 1;">Cancel</button>
                 <button class="primary-btn" onclick="saveEndedNap()" style="flex: 1;">Save Nap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Nap Confirmation Modal -->
+    <div id="cancel-nap-modal" class="modal-overlay" style="display: none;" onclick="closeCancelNapModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 400px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <h3>❌ Cancel Nap?</h3>
+                <button class="modal-close-btn" onclick="closeCancelNapModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="font-size: 1.1em; text-align: center; margin: 20px 0;">
+                    This nap will not be saved. Are you sure?
+                </p>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="primary-btn" onclick="closeCancelNapModal()" style="flex: 1; background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);">
+                    Keep Nap
+                </button>
+                <button class="primary-btn" onclick="confirmCancelNap()" style="flex: 1; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    Yes, Cancel It
+                </button>
             </div>
         </div>
     </div>
