@@ -1,17 +1,16 @@
 <!-- 
-    STEP 87: Simplified Realistic Wake Window Ranges (Ages 0-18 months)
-    - <20 min = IGNORED (micro-nap, fall back to last decent nap)
-    - 20-44 min = ±45 min range (non-restorative, uncertain timing)
-    - 45-60 min = ±15 min range (good restorative, 1 sleep cycle)
-    - 60+ min = PRECISE TIME (excellent restorative, 1.5-2+ cycles)
+    STEP 88: Cleaner Date Header & Bedtime Section
+    DATE HEADER:
+    - Smaller Previous/Next buttons (less visual weight)
+    - Date text centered with buttons on either side
+    - Cleaner TODAY badge (smaller, softer green, uppercase)
+    - Better mobile sizing
     
-    Why this is better:
-    - More realistic! Most good naps are 60-90 min, they should get precise windows
-    - 90+ was too high a bar - very few naps hit that
-    - Matches sleep science for ages 0-18 months (cycles are 45-60 min)
-    
-    TODO for Future Amy: When Grayson hits ~18 months, revisit thresholds!
-    Sleep cycles will approach 90 min, may need to adjust ranges then.
+    BEDTIME SECTION:
+    - Once bedtime is logged, hides the redundant input field
+    - Shows only: "✅ Bedtime Logged 8:03 PM [Edit]"
+    - Click Edit to show input again
+    - No more duplicate time displays!
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -136,8 +135,9 @@
 
         .date-nav {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            gap: 15px;
             margin-bottom: 25px;
             padding: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -147,11 +147,12 @@
         }
 
         .date-nav button {
-            padding: 8px 20px;
-            font-size: 14px;
+            padding: 6px 12px;
+            font-size: 13px;
             background: rgba(255,255,255,0.2);
             border: 2px solid rgba(255,255,255,0.3);
             color: white;
+            flex-shrink: 0;
         }
 
         .date-nav button:hover:not(:disabled) {
@@ -164,21 +165,24 @@
         }
 
         .date-nav h2 {
-            font-size: 1.4em;
+            font-size: 1.2em;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            margin: 0;
+            text-align: center;
         }
 
         .today-badge {
-            background: #10b981;
+            background: rgba(16, 185, 129, 0.9);
             color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.6em;
-            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.55em;
+            font-weight: 600;
             letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
         .next-sleep-window {
@@ -1198,16 +1202,17 @@
             }
 
             .date-nav {
-                gap: 10px;
+                gap: 8px;
+                padding: 12px;
             }
 
             .date-nav button {
-                padding: 8px 12px;
-                font-size: 0.9em;
+                padding: 5px 10px;
+                font-size: 0.8em;
             }
 
             .date-nav h2 {
-                font-size: 1em;
+                font-size: 0.95em;
             }
 
             .location-buttons {
@@ -1558,9 +1563,11 @@
                             </div>
                         </div>
                         
-                        <label>⏰ What time did baby actually fall asleep tonight?</label>
-                        <input type="datetime-local" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px; width: 100%; max-width: 100%; box-sizing: border-box;" onchange="updateLoggedBedtimeDisplay()">
-                        <p style="color: #666; font-size: 0.9em; margin-top: 8px;">This will auto-populate into tomorrow's "Last Night's Bedtime"</p>
+                        <div id="bedtime-input-section">
+                            <label>⏰ What time did baby actually fall asleep tonight?</label>
+                            <input type="datetime-local" id="tonight-bedtime" style="font-size: 1.2em; padding: 15px; width: 100%; max-width: 100%; box-sizing: border-box;" onchange="updateLoggedBedtimeDisplay()">
+                            <p style="color: #666; font-size: 0.9em; margin-top: 8px;">This will auto-populate into tomorrow's "Last Night's Bedtime"</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2752,6 +2759,7 @@
             const bedtimeInput = document.getElementById('tonight-bedtime').value;
             const display = document.getElementById('logged-bedtime-display');
             const textDisplay = document.getElementById('logged-bedtime-text');
+            const inputSection = document.getElementById('bedtime-input-section');
             
             if (bedtimeInput) {
                 const bedtimeDate = new Date(bedtimeInput);
@@ -2762,16 +2770,27 @@
                 });
                 textDisplay.textContent = displayTime;
                 display.style.display = 'block';
+                inputSection.style.display = 'none'; // Hide input when logged
             } else {
                 display.style.display = 'none';
+                inputSection.style.display = 'block'; // Show input when not logged
             }
         }
 
         function editLoggedBedtime() {
             const bedtimeInput = document.getElementById('tonight-bedtime');
+            const inputSection = document.getElementById('bedtime-input-section');
+            const display = document.getElementById('logged-bedtime-display');
             const currentValue = bedtimeInput.value;
             
             if (!currentValue) return;
+            
+            // Show the input section and hide the logged display
+            inputSection.style.display = 'block';
+            display.style.display = 'none';
+            
+            // Focus the input for editing
+            bedtimeInput.focus();
             
             const currentTime = new Date(currentValue);
             let hours = currentTime.getHours();
